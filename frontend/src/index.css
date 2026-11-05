@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply bg-paper font-sans text-ink antialiased; }
+  h1, h2, h3 { @apply text-ink; }
+  /* A wide table or chart inside a page grid scrolls inside its card instead of stretching the page on phones. */
+  .grid > * { min-width: 0; }
+}
+
+@layer components {
+  .focus-ring { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500 focus-visible:ring-offset-2; }
+}
+
+/* Printing (monthly report): hide the menus and let the page run over several sheets. */
+@media print {
+  @page { margin: 14mm; }
+  aside, header, nav, .no-print { display: none !important; }
+  html, body, #root, .h-full { height: auto !important; }
+  main { overflow: visible !important; padding: 0 !important; }
+  body { background: #fff; }
+  .print-break { break-inside: avoid; }
+}

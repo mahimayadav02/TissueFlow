@@ -1,0 +1,14 @@
+# Installed packages and build output (made again on every machine)
+node_modules/
+dist/
+build/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# System and editor files
+.DS_Store
+.vscode/
+*.log
