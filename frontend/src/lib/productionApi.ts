@@ -36,7 +36,7 @@ const canSeeTray = (user: User, t: Tray) => {
 const overdueRule = () => db.alertRules.find((r) => r.code === 'TRAY_OVERDUE');
 
 export type Overdue = 'OK' | 'WARNING' | 'CRITICAL';
-function overdueLevel(daysInStage: number): Overdue {
+export function overdueLevel(daysInStage: number): Overdue {
   const r = overdueRule();
   if (!r) return 'OK';
   if (r.criticalValue !== null && daysInStage > r.criticalValue) return 'CRITICAL';

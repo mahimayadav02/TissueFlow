@@ -28,6 +28,8 @@ import Scan from './pages/operator/Scan';
 import MonthlyCosts from './pages/costs/MonthlyCosts';
 import Orders from './pages/orders/Orders';
 import StockMedia from './pages/stock/StockMedia';
+import ZoneDetail from './pages/zones/ZoneDetail';
+import Zones from './pages/zones/Zones';
 import Alerts from './pages/results/Alerts';
 import Audit from './pages/results/Audit';
 import Forecast from './pages/results/Forecast';
@@ -80,6 +82,11 @@ const BUILT: Record<string, ReactElement> = {
   '/s/alerts': <Alerts />,
   '/s/reports': <Report />,
   '/o/alerts': <Alerts />,
+  // Zones: all zones on one page, then a page for each zone
+  '/m/zones': <Zones />,
+  '/m/zones/:areaId': <ZoneDetail />,
+  '/s/zones': <Zones />,
+  '/s/zones/:areaId': <ZoneDetail />,
 };
 
 const placeholders = (prefix: string) =>

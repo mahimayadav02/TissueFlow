@@ -6,6 +6,7 @@ import { ApiError, copy, need, same, wait, type New } from './apiUtil';
 import { evaluateAlerts } from './alertEngine';
 import { dailyApi } from './dailyApi';
 import { resultsApi, writeAudit } from './resultsApi';
+import { zonesApi } from './zonesApi';
 import { opsApi } from './opsApi';
 import { productionApi } from './productionApi';
 
@@ -202,7 +203,7 @@ const coreApi = {
   },
 };
 
-const rawApi = { ...coreApi, ...productionApi, ...dailyApi, ...opsApi, ...resultsApi };
+const rawApi = { ...coreApi, ...productionApi, ...dailyApi, ...opsApi, ...resultsApi, ...zonesApi };
 
 // ---------- audit log ----------
 // Every function that changes data is wrapped: after it succeeds, one line goes into the audit log

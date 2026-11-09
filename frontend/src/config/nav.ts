@@ -1,18 +1,22 @@
 // Sidebar menu for each role. "phase" says when the page gets built (see the frontend plan).
 import {
   AlertTriangle, BarChart3, Boxes, Bug, ClipboardCheck, ClipboardList, FileText, FlaskConical,
-  Gauge, History, Home, IndianRupee, LayoutDashboard, PackageCheck, QrCode, ScanLine, Settings2,
+  Gauge, History, Home, IndianRupee, LayoutDashboard, LayoutGrid, PackageCheck, QrCode, ScanLine, Settings2,
   ShoppingCart, Sprout, Thermometer, TrendingUp, UserCheck, Users, Warehouse, type LucideIcon,
 } from 'lucide-react';
 import type { Role } from '../lib/types';
 
 export interface NavItem { label: string; path: string; icon: LucideIcon; phase: number }
-export interface NavSection { title: string; items: NavItem[] }
+/** zonesBase: the sidebar adds one link per zone under this section (e.g. /m/zones/3), from the zones in Set-up. */
+export interface NavSection { title: string; items: NavItem[]; zonesBase?: '/m/zones' | '/s/zones' }
 
 export const NAV: Record<Role, NavSection[]> = {
   MANAGER: [
     { title: 'Overview', items: [
       { label: 'Dashboard', path: '/m', icon: LayoutDashboard, phase: 6 },
+    ] },
+    { title: 'Zones', zonesBase: '/m/zones', items: [
+      { label: 'All zones', path: '/m/zones', icon: LayoutGrid, phase: 8 },
     ] },
     { title: 'Production', items: [
       { label: 'Batches', path: '/m/batches', icon: Sprout, phase: 3 },
@@ -39,11 +43,14 @@ export const NAV: Record<Role, NavSection[]> = {
     ] },
   ],
   SUPERVISOR: [
-    { title: 'My zones', items: [
+    { title: 'Today', items: [
       { label: 'Zone dashboard', path: '/s', icon: Gauge, phase: 4 },
       { label: 'Attendance', path: '/s/attendance', icon: UserCheck, phase: 4 },
       { label: 'Assign work', path: '/s/assign', icon: ClipboardList, phase: 4 },
       { label: 'Verify entries', path: '/s/verify', icon: ClipboardCheck, phase: 4 },
+    ] },
+    { title: 'Zones', zonesBase: '/s/zones', items: [
+      { label: 'All my zones', path: '/s/zones', icon: LayoutGrid, phase: 8 },
     ] },
     { title: 'Production', items: [
       { label: 'Batches', path: '/s/batches', icon: Sprout, phase: 3 },
