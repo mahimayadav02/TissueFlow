@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
+import { InfoTip } from './InfoTip';
 
-export function Kpi({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
+/** One headline number: what it is, the number, and a line that puts it in context. */
+export function Kpi({ label, value, note, help }: { label: string; value: ReactNode; note?: ReactNode; help?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-[#B9DCC7] bg-forest-50 px-4 py-3">
-      <div className="text-xs text-[#2F4F3F]">{label}</div>
-      <div className="mt-1 font-display text-2xl font-semibold text-[#14532D]">{value}</div>
-      {note && <div className="mt-0.5 text-xs text-ink-muted">{note}</div>}
+    <div className="rounded-xl border border-line bg-white px-4 py-3.5">
+      <div className="flex items-center text-[13px] text-ink-muted">{label}{help && <InfoTip label={`About ${label}`}>{help}</InfoTip>}</div>
+      <div className="mt-1.5 font-display text-[26px] font-semibold leading-none tracking-tight tabular-nums text-forest">{value}</div>
+      {note && <div className="mt-1.5 text-xs text-ink-muted">{note}</div>}
     </div>
   );
 }

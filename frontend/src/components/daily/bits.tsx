@@ -39,9 +39,9 @@ export function DayPicker({ value, onChange, min, max }: { value: string; onChan
   const label = new Date(value + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => shift(-1)} className="focus-ring rounded-lg border border-[#C6BFB0] bg-white px-3 py-2 text-sm" aria-label="Previous day">‹</button>
-      <input type="date" value={value} min={min} max={max} onChange={(e) => e.target.value && onChange(e.target.value)} className="focus-ring rounded-lg border border-[#C6BFB0] bg-white px-3 py-2 text-sm" aria-label="Date" />
-      <button type="button" onClick={() => shift(1)} className="focus-ring rounded-lg border border-[#C6BFB0] bg-white px-3 py-2 text-sm" aria-label="Next day">›</button>
+      <button type="button" onClick={() => shift(-1)} className="focus-ring rounded-lg border border-[#C3CEC7] bg-white px-3 py-2 text-sm" aria-label="Previous day">‹</button>
+      <input type="date" value={value} min={min} max={max} onChange={(e) => e.target.value && onChange(e.target.value)} className="focus-ring rounded-lg border border-[#C3CEC7] bg-white px-3 py-2 text-sm" aria-label="Date" />
+      <button type="button" onClick={() => shift(1)} className="focus-ring rounded-lg border border-[#C3CEC7] bg-white px-3 py-2 text-sm" aria-label="Next day">›</button>
       <span className="text-sm text-ink-muted">{label}</span>
     </div>
   );

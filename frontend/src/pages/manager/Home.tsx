@@ -10,6 +10,7 @@ import { fmt, fmtDate } from '../../lib/paths';
 import { CAUSE_LABEL } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
 import { AlertList } from '../shared/AlertList';
+import { HELP } from '../../config/pageHelp';
 
 const rupees = (n: number) => (n < 0 ? '−' : '') + '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
 const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -18,22 +19,22 @@ const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString
 export default function ManagerHome() {
   const { user } = useAuth();
   const { data, error } = useLoad(() => (user ? Promise.all([api.dashboard(user), api.getLab()]) : Promise.reject(new Error('Not logged in'))), [user]);
-  const [d, lab] = data ?? [null, null];
+  const [d] = data ?? [null, null];
   const lossPct = d && d.loss30.handled ? (100 * d.loss30.lost) / d.loss30.handled : 0;
   const lm = d?.lastMonth;
   const lmName = lm ? new Date(lm.month + '-01T12:00:00').toLocaleDateString('en-IN', { month: 'long' }) : '';
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle={lab ? `${lab.name} · ${lab.address}` : 'Loading…'} />
+      <PageHeader help={HELP.dashboard} title="Dashboard" subtitle="Today’s work, losses, forecast and money across the whole lab. The (i) beside a number says how it is worked out." />
       <ErrorText>{error}</ErrorText>
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Kpi label="Running batches" value={d ? d.runningBatches : '—'} note={d ? `${fmt(d.liveBottles)} live bottles` : undefined} />
-        <Kpi label="Handled today" value={d ? fmt(d.today.handled) : '—'} note={d ? `of ${fmt(d.today.target)} target · ${d.today.present}/${d.today.operators} present` : undefined} />
-        <Kpi label="Loss, 30 days" value={d ? `${lossPct.toFixed(1)}%` : '—'} note={d ? `${fmt(d.loss30.lost)} of ${fmt(d.loss30.handled)} bottles` : undefined} />
-        <Kpi label="Plants ready in 6 months" value={d ? fmt(d.plantsNext180) : '—'} note={<Link to="/m/forecast" className="underline">forecast</Link>} />
-        <Kpi label="Open orders" value={d ? d.openOrders : '—'} note={d ? `${fmt(d.plantsToSend)} plants to send` : undefined} />
-        <Kpi label={`Profit, ${lmName || 'last month'}`} value={lm ? rupees(lm.profit) : '—'} note={lm ? `${rupees(lm.revenue)} in − ${rupees(lm.totalCost)} cost` : undefined} />
+        <Kpi help="Batches that still have live bottles or plants in any stage." label="Running batches" value={d ? d.runningBatches : '—'} note={d ? `${fmt(d.liveBottles)} live bottles` : undefined} />
+        <Kpi help="Bottles operators entered today, against the targets supervisors gave." label="Handled today" value={d ? fmt(d.today.handled) : '—'} note={d ? `of ${fmt(d.today.target)} target · ${d.today.present}/${d.today.operators} present` : undefined} />
+        <Kpi help="Bottles lost ÷ bottles handled in the last 30 days." label="Loss, 30 days" value={d ? `${lossPct.toFixed(1)}%` : '—'} note={d ? `${fmt(d.loss30.lost)} of ${fmt(d.loss30.handled)} bottles` : undefined} />
+        <Kpi help="The forecast of every running batch, added up." label="Plants ready in 6 months" value={d ? fmt(d.plantsNext180) : '—'} note={<Link to="/m/forecast" className="underline">forecast</Link>} />
+        <Kpi help="Orders not yet fully sent, and the plants still owed." label="Open orders" value={d ? d.openOrders : '—'} note={d ? `${fmt(d.plantsToSend)} plants to send` : undefined} />
+        <Kpi help="Plants sent last month × their order rate, minus the costs entered for that month." label={`Profit, ${lmName || 'last month'}`} value={lm ? rupees(lm.profit) : '—'} note={lm ? `${rupees(lm.revenue)} in − ${rupees(lm.totalCost)} cost` : undefined} />
       </div>
 
       <div className="mb-5 grid gap-5 xl:grid-cols-[1fr_340px]">

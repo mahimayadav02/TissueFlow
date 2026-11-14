@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
 import { Button, Field, Input } from '../../components/ui';
 import { HOME_OF, useAuth } from '../../lib/auth';
@@ -37,24 +37,24 @@ export default function Login() {
   return (
     <div className="flex min-h-full">
       <div className="hidden w-[42%] flex-col justify-between bg-forest p-10 text-white lg:flex">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="focus-ring flex w-fit items-center gap-2 rounded-lg">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2A6453]"><Sprout size={20} className="text-[#9FD3B8]" /></span>
-          <span className="font-display text-xl font-semibold">TissueFlow</span>
-        </div>
+          <span className="font-display text-xl font-semibold tracking-tight">TissueFlow</span>
+        </Link>
         <div>
-          <h1 className="font-display text-4xl font-semibold leading-tight text-white">Every bottle counted once, from sample to delivery.</h1>
+          <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white">Every culture bottle, traced from mother plant to dispatch.</h1>
           <p className="mt-4 max-w-md text-[#CFE6DA]">Batch and tray tracking, daily work, losses, stock, forecasts and alerts for the tissue culture lab.</p>
         </div>
-        <p className="text-xs text-sage">IoT Enabled Automated Tissue Management System · IGDTUW</p>
+        <p className="text-xs text-sage">IoT Enabled Automated Tissue Management System, IGDTUW</p>
       </div>
 
       <div className="flex flex-1 items-center justify-center p-5">
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex items-center gap-2 lg:hidden">
+          <Link to="/" className="mb-6 flex w-fit items-center gap-2 lg:hidden">
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-forest"><Sprout size={20} className="text-[#9FD3B8]" /></span>
-            <span className="font-display text-xl font-semibold">TissueFlow</span>
-          </div>
-          <h2 className="font-display text-2xl font-semibold">Sign in</h2>
+            <span className="font-display text-xl font-semibold tracking-tight">TissueFlow</span>
+          </Link>
+          <h2 className="font-display text-2xl font-semibold tracking-tight">Sign in</h2>
           <p className="mt-1 text-sm text-ink-muted">Use the phone number your manager registered.</p>
 
           <form onSubmit={submit} className="mt-6 flex flex-col gap-4" noValidate>
@@ -64,12 +64,13 @@ export default function Login() {
             <Field label="Password">
               <Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
+            <Link to="/forgot-password" className="-mt-2 self-end text-sm font-medium text-forest-700 hover:underline">Forgot password?</Link>
             {error && <p role="alert" className="rounded-lg bg-redx-100 px-3 py-2 text-sm text-redx-700">{error}</p>}
             <Button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Button>
           </form>
 
-          <div className="mt-8 rounded-xl border border-dashed border-[#9A9486] p-4">
-            <p className="text-xs font-semibold text-ink-muted">Demo accounts (sample data) · password {DEMO_PASSWORD}</p>
+          <div className="mt-8 rounded-xl border border-dashed border-[#8C9A93] p-4">
+            <p className="text-xs font-semibold text-ink-muted">Demo accounts on sample data. Tap one, then Sign in (password {DEMO_PASSWORD}).</p>
             <div className="mt-3 grid gap-2">
               {DEMO.map((u) => (
                 <button

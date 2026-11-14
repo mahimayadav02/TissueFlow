@@ -1,9 +1,8 @@
 import type { ReactElement } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { RequireRole } from './components/layout/RequireRole';
 import { NAV } from './config/nav';
-import { HOME_OF, useAuth } from './lib/auth';
 import Login from './pages/auth/Login';
 import ManagerHome from './pages/manager/Home';
 import OperatorHome from './pages/operator/Home';
@@ -35,6 +34,11 @@ import Audit from './pages/results/Audit';
 import Forecast from './pages/results/Forecast';
 import Monitoring from './pages/results/Monitoring';
 import Report from './pages/results/Report';
+import Help from './pages/account/Help';
+import Profile from './pages/account/Profile';
+import About from './pages/public/About';
+import ForgotPassword from './pages/public/ForgotPassword';
+import Landing from './pages/public/Landing';
 
 /**
  * Every address in the app.
@@ -87,6 +91,13 @@ const BUILT: Record<string, ReactElement> = {
   '/m/zones/:areaId': <ZoneDetail />,
   '/s/zones': <Zones />,
   '/s/zones/:areaId': <ZoneDetail />,
+  // Account: help guide and profile for every role
+  '/m/help': <Help />,
+  '/s/help': <Help />,
+  '/o/help': <Help />,
+  '/m/profile': <Profile />,
+  '/s/profile': <Profile />,
+  '/o/profile': <Profile />,
 };
 
 const placeholders = (prefix: string) =>
@@ -95,16 +106,14 @@ const placeholders = (prefix: string) =>
     .filter((i) => i.path.startsWith(prefix + '/') && !BUILT[i.path])
     .map((i) => <Route key={i.path} path={i.path} element={<ComingSoon />} />);
 
-function RootRedirect() {
-  const { user } = useAuth();
-  return <Navigate to={user ? HOME_OF[user.role] : '/login'} replace />;
-}
-
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<RootRedirect />} />
+      {/* Public pages: anyone can open these */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       {/* Printable label sheets open without the sidebar */}
       <Route path="/m/trays/labels" element={<RequireRole allow={['MANAGER']}><TrayLabels /></RequireRole>} />
       <Route path="/s/trays/labels" element={<RequireRole allow={['SUPERVISOR', 'MANAGER']}><TrayLabels /></RequireRole>} />

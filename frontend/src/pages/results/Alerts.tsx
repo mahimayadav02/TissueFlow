@@ -6,6 +6,7 @@ import { addDays, today } from '../../lib/apiUtil';
 import { useAuth } from '../../lib/auth';
 import type { AlertRow } from '../../lib/resultsApi';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 type Tab = 'open' | 'seen';
 
@@ -56,7 +57,7 @@ export default function Alerts() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.alerts}
         title="Alerts"
         subtitle="Raised automatically when a limit in Set-up → Alert limits is crossed. Acknowledge an alert once someone is dealing with it."
         actions={canAck && tab === 'open' && open.length > 0 && <Button onClick={() => ack(picked)} disabled={busy || !picked.length}><Check size={16} /> Acknowledge {picked.length || ''}</Button>}
@@ -64,7 +65,7 @@ export default function Alerts() {
       <Tabs<Tab> value={tab} onChange={(t) => { setTab(t); setPicked([]); }} tabs={[{ id: 'open', label: `Open (${open.length})` }, { id: 'seen', label: 'Acknowledged, last 30 days' }]} />
       <div className="mb-4 flex flex-wrap gap-2">
         {([['', 'All'], ['CRITICAL', 'Critical'], ['WARNING', 'Warning']] as const).map(([v, l]) => (
-          <button key={l} onClick={() => setSeverity(v)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${severity === v ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C6BFB0] bg-white'}`}>{l}</button>
+          <button key={l} onClick={() => setSeverity(v)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${severity === v ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C3CEC7] bg-white'}`}>{l}</button>
         ))}
       </div>
       <ErrorText>{error || ackError}</ErrorText>
@@ -77,7 +78,7 @@ export default function Alerts() {
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((a: AlertRow) => (
-              <li key={a.alertId} className={`flex items-start gap-3 rounded-lg border p-3 ${a.severity === 'CRITICAL' && !a.ackAt ? 'border-redx-700/40 bg-redx-100/40' : 'border-[#EEEAE1]'}`}>
+              <li key={a.alertId} className={`flex items-start gap-3 rounded-lg border p-3 ${a.severity === 'CRITICAL' && !a.ackAt ? 'border-redx-700/40 bg-redx-100/40' : 'border-[#E6ECE8]'}`}>
                 {canAck && !a.ackAt && <input type="checkbox" className="mt-1" aria-label={`Select alert: ${a.message}`} checked={picked.includes(a.alertId)} onChange={() => toggle(a.alertId)} />}
                 <span className={a.severity === 'CRITICAL' ? 'text-redx-700' : 'text-amberx-700'} aria-hidden>
                   {a.severity === 'CRITICAL' ? <AlertOctagon size={20} /> : <AlertTriangle size={20} />}

@@ -73,7 +73,7 @@ export function LineChart({ series, unit, limits = [], height = 220, formatTime,
         {series.map((s, i) => <path key={s.name} d={path(s.points)} fill="none" stroke={SERIES[i]} strokeWidth="2" strokeLinejoin="round" />)}
         {hp && (
           <g>
-            <line x1={x(hp.t)} x2={x(hp.t)} y1={pad.t} y2={H - pad.b} stroke="#9A9486" strokeWidth="1" />
+            <line x1={x(hp.t)} x2={x(hp.t)} y1={pad.t} y2={H - pad.b} stroke="#8C9A93" strokeWidth="1" />
             {series.map((s, i) => s.points[hover!] && <circle key={s.name} cx={x(s.points[hover!].t)} cy={y(s.points[hover!].y)} r="4.5" fill={SERIES[i]} stroke="#fff" strokeWidth="2" />)}
           </g>
         )}

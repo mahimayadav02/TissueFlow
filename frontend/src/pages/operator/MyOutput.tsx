@@ -24,7 +24,7 @@ export default function MyOutput() {
       <h1 className="font-display text-2xl font-semibold">My output</h1>
       <div className="flex gap-2">
         {[7, 30].map((d) => (
-          <button key={d} onClick={() => setDays(d)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${days === d ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C6BFB0] bg-white'}`}>Last {d} days</button>
+          <button key={d} onClick={() => setDays(d)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${days === d ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C3CEC7] bg-white'}`}>Last {d} days</button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -39,7 +39,7 @@ export default function MyOutput() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-ink-muted">No work in this period.</p>
         ) : (
-          <ul className="divide-y divide-[#EEEAE1]">
+          <ul className="divide-y divide-[#E6ECE8]">
             {rows.map((r) => (
               <li key={r.workDate} className="py-3">
                 <div className="flex items-center justify-between gap-2 text-sm">

@@ -6,6 +6,7 @@ import { resetDb } from '../../../lib/store';
 import { AREA_TYPE_LABEL, type Area, type AreaType, type Bench, type Lab } from '../../../lib/types';
 import { useLoad } from '../../../lib/useLoad';
 import { useSave } from '../../../lib/useSave';
+import { HELP } from '../../../config/pageHelp';
 
 /** Lab details, zones (areas) and the benches in each zone. Manager only. */
 export default function LabSetup() {
@@ -30,7 +31,7 @@ export default function LabSetup() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.setup}
         title="Lab, zones and benches"
         subtitle="Set these up first. Every batch, tray and work entry is linked to a zone and a bench."
         actions={<Button variant="ghost" onClick={() => window.confirm('Throw away all changes and go back to the sample data?') && resetDb()}><RotateCcw size={16} /> Reset sample data</Button>}

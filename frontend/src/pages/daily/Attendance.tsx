@@ -7,6 +7,7 @@ import { addDays, today } from '../../lib/apiUtil';
 import { useAuth } from '../../lib/auth';
 import { ATT_LABEL, type AttStatus } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 const CHOICES: AttStatus[] = ['P', 'HD', 'A'];
 const TONE: Record<AttStatus, string> = {
@@ -60,7 +61,7 @@ export default function Attendance() {
 
   return (
     <>
-      <PageHeader title="Attendance" subtitle="Mark each operator at the start of the shift. Absent operators cannot be given work for that day." />
+      <PageHeader help={HELP.attendance} title="Attendance" subtitle="Mark each operator at the start of the shift. Absent operators cannot be given work for that day." />
       <div className="mb-4"><DayPicker value={date} onChange={setDate} min={addDays(today(), -7)} max={today()} /></div>
       <ErrorText>{error}</ErrorText>
 
@@ -73,7 +74,7 @@ export default function Attendance() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-ink-muted">No operators in your zones.</p>
         ) : (
-          <ul className="divide-y divide-[#EEEAE1]">
+          <ul className="divide-y divide-[#E6ECE8]">
             {rows.map((r) => (
               <li key={r.userId} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-[140px]">
@@ -82,7 +83,7 @@ export default function Attendance() {
                 </div>
                 <div className="flex items-center gap-3">
                   {r.status && marks[r.userId] !== r.status && <span className="text-xs text-ink-muted">was <AttBadge status={r.status} /></span>}
-                  <div className="flex overflow-hidden rounded-lg border border-[#C6BFB0]" role="radiogroup" aria-label={`Attendance of ${r.fullName}`}>
+                  <div className="flex overflow-hidden rounded-lg border border-[#C3CEC7]" role="radiogroup" aria-label={`Attendance of ${r.fullName}`}>
                     {CHOICES.map((c) => (
                       <button
                         key={c}
@@ -90,7 +91,7 @@ export default function Attendance() {
                         role="radio"
                         aria-checked={marks[r.userId] === c}
                         onClick={() => set(r.userId, c)}
-                        className={`focus-ring min-h-[44px] min-w-[72px] border-l border-[#C6BFB0] px-3 text-sm font-semibold first:border-l-0 ${marks[r.userId] === c ? TONE[c] : 'bg-white text-ink'}`}
+                        className={`focus-ring min-h-[44px] min-w-[72px] border-l border-[#C3CEC7] px-3 text-sm font-semibold first:border-l-0 ${marks[r.userId] === c ? TONE[c] : 'bg-white text-ink'}`}
                       >
                         {ATT_LABEL[c]}
                       </button>

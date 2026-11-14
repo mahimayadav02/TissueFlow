@@ -23,7 +23,7 @@ export function AlertList({ title = 'Open alerts' }: { title?: string }) {
       ) : (
         <ul className="flex flex-col gap-2">
           {alerts.map((a) => (
-            <li key={a.alertId} className="flex items-start gap-3 rounded-lg border border-[#EEEAE1] p-3">
+            <li key={a.alertId} className="flex items-start gap-3 rounded-lg border border-[#E6ECE8] p-3">
               <Badge tone={a.severity === 'CRITICAL' ? 'red' : 'amber'}>{a.severity === 'CRITICAL' ? 'Critical' : 'Warning'}</Badge>
               <div className="min-w-0 text-sm">
                 <div>{a.message}</div>

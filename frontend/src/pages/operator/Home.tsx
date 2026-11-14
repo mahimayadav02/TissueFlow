@@ -62,7 +62,7 @@ export default function OperatorHome() {
         ) : (
           <ul className="flex flex-col gap-3">
             {lines.map((l) => (
-              <li key={l.assignId} className="rounded-lg border border-[#EEEAE1] p-3">
+              <li key={l.assignId} className="rounded-lg border border-[#E6ECE8] p-3">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-semibold">{l.batchCode}</span>
                   <StageBadge code={l.stageCode} />
@@ -78,7 +78,7 @@ export default function OperatorHome() {
 
       {live.length > 0 && (
         <Card title="Trays done today">
-          <ul className="divide-y divide-[#EEEAE1] text-sm">
+          <ul className="divide-y divide-[#E6ECE8] text-sm">
             {live.map((e) => (
               <li key={e.entryId} className="flex items-center justify-between gap-2 py-2">
                 <span><span className="font-mono font-semibold">{e.qrCode}</span> <span className="text-ink-muted">{e.bottlesHandled} → {e.bottlesProduced}{e.bottlesLost ? `, ${e.bottlesLost} lost` : ''}</span></span>

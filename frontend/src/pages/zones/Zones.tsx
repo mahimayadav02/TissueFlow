@@ -10,6 +10,7 @@ import { basePath, fmt } from '../../lib/paths';
 import { AREA_TYPE_LABEL } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
 import type { ZoneSummary } from '../../lib/zonesApi';
+import { HELP } from '../../config/pageHelp';
 
 /** All zones on one page: a card for each zone, then one table comparing them. Click a zone to open its own page. */
 export default function Zones() {
@@ -25,7 +26,7 @@ export default function Zones() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.zones}
         title={user.role === 'MANAGER' ? 'All zones' : 'My zones'}
         subtitle="Every zone at a glance. Open a zone to see its operators, trays, benches, losses and alerts."
       />

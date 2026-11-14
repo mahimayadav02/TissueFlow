@@ -57,7 +57,7 @@ export function BarChart({ data, barName, lineName, height = 220, label }: {
           );
         })}
         {hasLine && <path d={linePath} fill="none" stroke={SERIES[1]} strokeWidth="2" strokeLinejoin="round" pointerEvents="none" />}
-        <line x1={pad.l} x2={W - pad.r} y1={H - pad.b} y2={H - pad.b} stroke="#C9C2B4" />
+        <line x1={pad.l} x2={W - pad.r} y1={H - pad.b} y2={H - pad.b} stroke="#C3CEC7" />
       </svg>
       {h && hover !== null && (
         <div className="pointer-events-none absolute top-6 z-10 w-[160px] rounded-lg border border-line bg-white px-3 py-2 text-xs shadow-md" style={{ left: Math.min(Math.max(cx(hover) - 80, 0), W - 160) }}>

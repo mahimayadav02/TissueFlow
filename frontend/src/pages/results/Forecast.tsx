@@ -9,6 +9,7 @@ import type { ForecastRow } from '../../lib/resultsApi';
 import { fmt, fmtDate } from '../../lib/paths';
 import { useLoad } from '../../lib/useLoad';
 import { SettingsForm } from '../orders/Orders';
+import { HELP } from '../../config/pageHelp';
 
 const rupees = (n: number) => (n < 0 ? '−' : '') + '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -43,7 +44,7 @@ export default function Forecast() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.forecast}
         title="Forecast and profit"
         subtitle="Worked out from each batch’s own records every time the page opens. Nothing here is typed in by hand."
         actions={<Button variant="secondary" onClick={() => setSettingsOpen(true)} disabled={!settings}><Settings2 size={16} /> Forecast assumptions</Button>}
@@ -70,7 +71,7 @@ export default function Forecast() {
               {!data && <tr><td colSpan={11} className="py-6 text-center text-ink-muted">Loading…</td></tr>}
               {rows.map((r) => (
                 <Fragment key={r.batchId}>
-                  <tr className="border-b border-[#EEEAE1]">
+                  <tr className="border-b border-[#E6ECE8]">
                     <td className="px-2 py-2">
                       <button className="focus-ring rounded p-0.5" aria-label={openId === r.batchId ? 'Hide stages' : 'Show stages'} onClick={() => setOpenId(openId === r.batchId ? null : r.batchId)}>
                         {openId === r.batchId ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

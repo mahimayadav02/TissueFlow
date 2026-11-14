@@ -14,6 +14,7 @@ import { basePath, fmt, fmtDate } from '../../lib/paths';
 import { AREA_TYPE_LABEL, CAUSE_LABEL } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
 import type { ZoneDetail as Detail } from '../../lib/zonesApi';
+import { HELP } from '../../config/pageHelp';
 
 /** One zone's own page. Shows only the parts that make sense for that zone (operators, trays, media, room, losses, alerts). */
 export default function ZoneDetail() {
@@ -30,7 +31,7 @@ export default function ZoneDetail() {
   return (
     <>
       <Link to={`${base}/zones`} className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:underline"><ArrowLeft size={15} /> All zones</Link>
-      <PageHeader
+      <PageHeader help={HELP.zone}
         title={z ? z.name : 'Zone'}
         subtitle={z ? `${AREA_TYPE_LABEL[z.areaType]} · room ${z.roomNo} · ${z.supervisors.length ? `supervisor ${z.supervisors.join(', ')}` : 'no supervisor assigned'}${z.purpose ? ` — ${z.purpose}` : ''}` : 'Loading…'}
       />

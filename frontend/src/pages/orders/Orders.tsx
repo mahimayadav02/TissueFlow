@@ -9,6 +9,7 @@ import type { OrderCheck, OrderInput, OrderRow } from '../../lib/opsApi';
 import { fmt, fmtDate } from '../../lib/paths';
 import type { Crop, Decision, Settings, Stage } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 const rupees = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
 const DECISION: Record<Decision, { label: string; tone: 'green' | 'amber' | 'red' }> = {
@@ -37,7 +38,7 @@ export default function Orders() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.orders}
         title="Orders"
         subtitle="Before saying yes to a customer, check the order: the forecast of running batches says how many plants will be ready by that date."
         actions={

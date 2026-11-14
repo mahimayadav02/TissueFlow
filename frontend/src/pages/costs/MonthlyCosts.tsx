@@ -8,6 +8,7 @@ import type { BatchCostRow } from '../../lib/opsApi';
 import { fmt } from '../../lib/paths';
 import { HEADING_LABEL, type CostHeading } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 const HEADINGS = Object.keys(HEADING_LABEL) as CostHeading[];
 const rupees = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -66,7 +67,7 @@ export default function MonthlyCosts() {
 
   return (
     <>
-      <PageHeader title="Monthly costs" subtitle="Enter what the lab spent in a month, heading by heading. No bills or salaries needed, just the totals." />
+      <PageHeader help={HELP.costs} title="Monthly costs" subtitle="Enter what the lab spent in a month, heading by heading. No bills or salaries needed, just the totals." />
       <div className="mb-4 flex items-center gap-2">
         <Select value={month} onChange={(e) => setMonth(e.target.value)} className="w-auto" aria-label="Month">
           {months.map((m) => <option key={m} value={m}>{monthName(m)}{m === months[0] ? ' (this month)' : ''}</option>)}

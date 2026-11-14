@@ -231,7 +231,7 @@ function T({ head, rows, empty = 'Nothing to show.' }: { head: string[]; rows: (
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-[#EEEAE1] last:border-0">
+            <tr key={i} className="border-b border-[#E6ECE8] last:border-0">
               {r.map((c, j) => <td key={j} className={`px-2 py-1.5 ${numCol[j] ? 'text-right tabular-nums' : ''}`}>{c ?? '—'}</td>)}
             </tr>
           ))}

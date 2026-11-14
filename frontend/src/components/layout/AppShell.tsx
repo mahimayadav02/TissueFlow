@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/auth';
 import { cn } from '../ui/cn';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { Tour } from './Tour';
 
 /** Frame for every logged-in page: sidebar (desktop), drawer (phone/tablet), top bar, and page content. */
 export function AppShell() {
@@ -38,11 +39,13 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setDrawer(true)} />
         <main className={cn('flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6', isOperator && 'pb-24 lg:pb-6')}>
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <Tour />
 
       {/* Operator bottom tabs on phone */}
       {isOperator && (

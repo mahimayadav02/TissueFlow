@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
 import { cn } from './cn';
 
-const box = 'focus-ring w-full rounded-lg border border-[#C6BFB0] bg-[#FBFAF7] px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-muted/60';
+const box = 'focus-ring w-full rounded-lg border border-[#C3CEC7] bg-[#FBFAF7] px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-muted/60';
 
 export function Field({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string; children: ReactNode }) {
   return (

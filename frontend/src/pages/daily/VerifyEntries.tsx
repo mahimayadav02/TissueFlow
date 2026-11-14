@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import type { EntryRow } from '../../lib/dailyApi';
 import { fmt } from '../../lib/paths';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 type Tab = 'pending' | 'done';
 
@@ -67,7 +68,7 @@ export default function VerifyEntries() {
 
   return (
     <>
-      <PageHeader title="Check entries" subtitle="Every tray an operator sub-cultures waits here. Verified entries count in reports; a sent-back entry is undone if its new trays have not been touched." />
+      <PageHeader help={HELP.verify} title="Check entries" subtitle="Every tray an operator sub-cultures waits here. Verified entries count in reports; a sent-back entry is undone if its new trays have not been touched." />
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[{ id: 'pending', label: `To check (${pending.length})` }, { id: 'done', label: 'Checked, last 7 days' }]} />
       <ErrorText>{error || actionError}</ErrorText>
       {msg && <p className="mb-4 rounded-lg bg-forest-50 px-3 py-2 text-sm text-forest-700">{msg}</p>}

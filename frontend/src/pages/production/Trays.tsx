@@ -10,6 +10,7 @@ import { useAuth } from '../../lib/auth';
 import { basePath, fmt, fmtDate } from '../../lib/paths';
 import type { TrayRow } from '../../lib/productionApi';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 type Action = null | { kind: 'sub' | 'loss'; tray: TrayRow } | { kind: 'move'; trays: TrayRow[] };
 
@@ -56,7 +57,7 @@ export default function Trays() {
 
   return (
     <>
-      <PageHeader title={user?.role === 'MANAGER' ? 'Trays and QR labels' : 'Move trays'} subtitle="Every tray holds up to 30 bottles of one batch and one stage, and carries a QR label." />
+      <PageHeader help={HELP.trays} title={user?.role === 'MANAGER' ? 'Trays and QR labels' : 'Move trays'} subtitle="Every tray holds up to 30 bottles of one batch and one stage, and carries a QR label." />
       <ErrorText>{error}</ErrorText>
 
       <Card title="Find a tray" className="mb-5">

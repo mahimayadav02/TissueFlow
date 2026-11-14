@@ -10,6 +10,7 @@ import { useAuth } from '../../lib/auth';
 import { fmt } from '../../lib/paths';
 import { useLoad } from '../../lib/useLoad';
 import { AlertList } from '../shared/AlertList';
+import { HELP } from '../../config/pageHelp';
 
 /**
  * Target vs done for every operator on one day.
@@ -37,7 +38,7 @@ export default function DailyWork() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.daily}
         title={isManager ? 'Daily work' : 'My zones'}
         subtitle={isManager ? 'Target given and work done by every operator, zone by zone.' : 'Attendance, work given and work done in your zones.'}
       />

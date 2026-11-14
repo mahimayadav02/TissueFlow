@@ -8,6 +8,7 @@ import type { ItemRow, LotRow, TxnRow } from '../../lib/opsApi';
 import { fmt, fmtDate } from '../../lib/paths';
 import { CATEGORY_LABEL, type ItemCategory, type MediaRecipe, type TxnType } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 type Tab = 'stock' | 'media' | 'history';
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as ItemCategory[];
@@ -35,7 +36,7 @@ export default function StockMedia() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.stock}
         title="Stock and media"
         subtitle="Quantities only. What the lab spends is entered as monthly totals on the Monthly costs page."
         actions={

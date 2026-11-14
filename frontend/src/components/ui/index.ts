@@ -6,6 +6,7 @@ export { IconButton } from './IconButton';
 export { Kpi } from './Kpi';
 export { ErrorText, FormActions, Modal } from './Modal';
 export { PageHeader } from './PageHeader';
-export { Table, type Column } from './Table';
+export { EmptyState, SkeletonRows, Table, type Column } from './Table';
+export { InfoTip } from './InfoTip';
 export { Tabs } from './Tabs';
 export { cn } from './cn';

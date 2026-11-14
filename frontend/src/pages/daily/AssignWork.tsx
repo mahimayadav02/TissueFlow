@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import type { AssignInput, AssignmentRow, AssignOptions } from '../../lib/dailyApi';
 import { fmt } from '../../lib/paths';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 /** Supervisor gives each operator work for the day: batch, stage, bench (hood) and a target in bottles. */
 export default function AssignWork() {
@@ -49,7 +50,7 @@ export default function AssignWork() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.assign}
         title="Give work"
         subtitle="Each line is one batch at one stage. Operators see their lines on their phone, and every tray they sub-culture counts towards the target."
         actions={!past && opts && (
@@ -84,7 +85,7 @@ export default function AssignWork() {
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {mine.map((l) => (
-                      <li key={l.assignId} className="rounded-lg border border-[#EEEAE1] p-3">
+                      <li key={l.assignId} className="rounded-lg border border-[#E6ECE8] p-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-2 text-sm">
                             <span className="font-semibold">{l.batchCode}</span>

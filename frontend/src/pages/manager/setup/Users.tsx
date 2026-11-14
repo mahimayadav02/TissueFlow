@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth';
 import { ROLE_LABEL, SCOPE_OF, type Area, type Role, type User } from '../../../lib/types';
 import { useLoad } from '../../../lib/useLoad';
 import { useSave } from '../../../lib/useSave';
+import { HELP } from '../../../config/pageHelp';
 
 type Filter = 'ALL' | Role;
 const ROLES: Role[] = ['MANAGER', 'SUPERVISOR', 'OPERATOR'];
@@ -36,7 +37,7 @@ export default function Users() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.users}
         title="Users"
         subtitle="Everyone who works in the lab. The role decides what each person can see: manager all zones, supervisor own zones, operator own work."
         actions={<Button onClick={() => setEdit({ fullName: '', phone: '', role: 'OPERATOR', homeAreaId: areas[0]?.areaId ?? null, zoneIds: [], status: 'ACTIVE' })}><Plus size={16} /> Add user</Button>}
@@ -49,7 +50,7 @@ export default function Users() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={cn('focus-ring rounded-full border px-3 py-1.5 text-sm', filter === f ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C6BFB0] bg-white')}
+              className={cn('focus-ring rounded-full border px-3 py-1.5 text-sm', filter === f ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C3CEC7] bg-white')}
             >
               {f === 'ALL' ? `All (${users.filter((u) => u.status === 'ACTIVE').length})` : `${ROLE_LABEL[f]}s (${count(f)})`}
             </button>

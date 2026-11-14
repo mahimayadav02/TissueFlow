@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/auth';
 import type { AlertRow } from '../../lib/resultsApi';
 import type { SensorReading, Severity } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 const RANGES = [
   { hours: 6, label: '6 hours' },
@@ -37,7 +38,7 @@ export default function Monitoring() {
   if (data === null && !error) {
     return (
       <>
-        <PageHeader title="Room monitoring" />
+        <PageHeader help={HELP.monitoring} title="Room monitoring" />
         <Card><p className="text-sm text-ink-muted">Loading… (or no sensor node in your zones)</p></Card>
       </>
     );
@@ -45,7 +46,7 @@ export default function Monitoring() {
 
   return (
     <>
-      <PageHeader title="Room monitoring" subtitle="Temperature, humidity and light from the sensor node. Limits come from Set-up → Alert limits." />
+      <PageHeader help={HELP.monitoring} title="Room monitoring" subtitle="Temperature, humidity and light from the sensor node. Limits come from Set-up → Alert limits." />
       <ErrorText>{error}</ErrorText>
       {data && (
         <>
@@ -61,7 +62,7 @@ export default function Monitoring() {
 
           <div className="mb-4 flex flex-wrap gap-2">
             {RANGES.map((r) => (
-              <button key={r.hours} onClick={() => setHours(r.hours)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${hours === r.hours ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C6BFB0] bg-white'}`}>{r.label}</button>
+              <button key={r.hours} onClick={() => setHours(r.hours)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${hours === r.hours ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C3CEC7] bg-white'}`}>{r.label}</button>
             ))}
           </div>
 

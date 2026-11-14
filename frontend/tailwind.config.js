@@ -5,9 +5,10 @@ export default {
     extend: {
       colors: {
         forest: { DEFAULT: '#143A30', 700: '#1F5C4A', 600: '#2A6453', 500: '#2F7A63', 100: '#D3EEDD', 50: '#EEF7F1' },
-        paper: '#F4F2EC',
-        line: '#DCD6C8',
-        ink: { DEFAULT: '#1C2321', muted: '#4F5754' },
+        // Cool "agar white" page and green-grey lines: reads as a lab, not a paper notebook.
+        paper: '#F2F5F2',
+        line: '#D6DFD9',
+        ink: { DEFAULT: '#16211C', muted: '#4D5A54' },
         sage: '#A9C6BA',
         amberx: { 100: '#FCE7CD', 700: '#7C2D12' },
         redx: { 100: '#F7D4CF', 700: '#8A1C12' },
@@ -16,7 +17,10 @@ export default {
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-        display: ['Fraunces', 'Georgia', 'serif'],
+        // One family for the whole app; headings get weight and tight spacing instead of a second typeface.
+        display: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        // Only for real codes: tray QR codes, batch and stage codes, media lots.
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: { xl: '12px' },
     },

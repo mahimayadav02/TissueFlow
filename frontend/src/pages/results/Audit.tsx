@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import type { AuditRow } from '../../lib/resultsApi';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 /** Who changed what and when, for the last 30 days. Manager only. */
 export default function Audit() {
@@ -18,7 +19,7 @@ export default function Audit() {
 
   return (
     <>
-      <PageHeader title="Audit log" subtitle="Every change made in the app: who, what and when. Entries cannot be edited or deleted." />
+      <PageHeader help={HELP.audit} title="Audit log" subtitle="Every change made in the app: who, what and when. Entries cannot be edited or deleted." />
       <ErrorText>{error}</ErrorText>
       <Card>
         <div className="mb-3 flex flex-wrap gap-2">

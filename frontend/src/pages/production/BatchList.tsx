@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { basePath, fmt, fmtDate } from '../../lib/paths';
 import type { BatchSummary } from '../../lib/productionApi';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 /** All running batches. Manager sees every batch; supervisor sees batches with trays in own zones. */
 export default function BatchList() {
@@ -23,7 +24,7 @@ export default function BatchList() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.batches}
         title="Batches"
         subtitle={isManager ? 'Every batch from samples to hardening. Click a batch code to see its trays and history.' : 'Batches that have trays in your zones. Counts show only your zones.'}
         actions={isManager && <Button onClick={() => setAdding(true)}><Plus size={16} /> New batch</Button>}

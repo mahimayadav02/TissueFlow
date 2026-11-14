@@ -10,6 +10,7 @@ import { basePath, fmt, fmtDate } from '../../lib/paths';
 import type { TrayRow } from '../../lib/productionApi';
 import { CAUSE_LABEL } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 type Tab = 'trays' | 'history' | 'losses' | 'samples';
 
@@ -46,7 +47,7 @@ export default function BatchDetail() {
   return (
     <>
       <Link to={`${base}/batches`} className="mb-3 inline-flex items-center gap-1 text-sm text-forest-700"><ArrowLeft size={15} /> All batches</Link>
-      <PageHeader
+      <PageHeader help={HELP.batch}
         title={`Batch ${batch.batchCode}`}
         subtitle={
           <span>

@@ -9,6 +9,7 @@ import { fmt, fmtDate } from '../../lib/paths';
 import type { LossRow, TrayRow } from '../../lib/productionApi';
 import { CAUSE_LABEL, LOSS_TYPE_LABEL, type LossCause } from '../../lib/types';
 import { useLoad } from '../../lib/useLoad';
+import { HELP } from '../../config/pageHelp';
 
 const PERIODS = [
   { days: 30, label: 'Last 30 days' },
@@ -41,7 +42,7 @@ export default function Losses() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help={HELP.losses}
         title="Contamination and losses"
         subtitle="Every lost bottle is recorded against its tray, so losses can be traced to stage, zone, operator and cause."
         actions={<Button variant="danger" onClick={() => setAdding(true)}><Bug size={16} /> Record loss</Button>}
@@ -49,7 +50,7 @@ export default function Losses() {
       <ErrorText>{error}</ErrorText>
       <div className="mb-4 flex flex-wrap gap-2">
         {PERIODS.map((p) => (
-          <button key={p.days} onClick={() => setPeriod(p.days)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${period === p.days ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C6BFB0] bg-white'}`}>{p.label}</button>
+          <button key={p.days} onClick={() => setPeriod(p.days)} className={`focus-ring rounded-full border px-3 py-1.5 text-sm ${period === p.days ? 'border-forest-700 bg-forest-700 text-white' : 'border-[#C3CEC7] bg-white'}`}>{p.label}</button>
         ))}
       </div>
 
