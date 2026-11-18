@@ -2,7 +2,7 @@
 // Replaced by the real backend later.
 import { addDays, today } from './apiUtil';
 import type {
-  Alert, AlertRule, Area, Attendance, AttStatus, Batch, Bench, Contamination, CostEntry, CostHeading, Crop, Delivery, Item, Lab, MediaLot,
+  WorkKind, Alert, AlertRule, Area, Attendance, AttStatus, Batch, Bench, Contamination, CostEntry, CostHeading, Crop, Delivery, Item, Lab, MediaLot,
   MediaRecipe, ProductionEntry, SalesOrder, Sample, SensorDevice, Settings, Stage, StockTxn, AuditEntry, Tray, TrayMovement, User, WorkAssignment,
 } from './types';
 
@@ -17,6 +17,7 @@ const areas: Area[] = [
   { areaId: 3, labId: 1, name: 'Inoculation', areaType: 'INOCULATION', roomNo: '1-01' },
   { areaId: 4, labId: 1, name: 'Incubation (growth room)', areaType: 'INCUBATION', roomNo: '1-02' },
   { areaId: 5, labId: 1, name: 'Hardening', areaType: 'HARDENING', roomNo: 'Poly-house' },
+  { areaId: 6, labId: 1, name: 'Quality check', areaType: 'QC', roomNo: '1-03' },
 ];
 
 const benches: Bench[] = [
@@ -25,18 +26,22 @@ const benches: Bench[] = [
   ...[1, 2, 3, 4, 5, 6].map((n) => ({ benchId: 4 + n, areaId: 3, code: `LAF-${n}`, capacityTrays: 10 })),
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ benchId: 10 + n, areaId: 4, code: `RACK-${n}`, capacityTrays: 60 })),
   ...[1, 2, 3].map((n) => ({ benchId: 18 + n, areaId: 5, code: `PH-${n}`, capacityTrays: 120 })),
+  ...[1, 2].map((n) => ({ benchId: 21 + n, areaId: 6, code: `QC-${n}`, capacityTrays: 10 })),
 ];
 
 const users: User[] = [
   { userId: 1, fullName: 'R. Patil', role: 'MANAGER', phone: '9000000001', homeAreaId: null, zoneIds: [], status: 'ACTIVE' },
   { userId: 2, fullName: 'Supervisor A', role: 'SUPERVISOR', phone: '9000000002', homeAreaId: 1, zoneIds: [1, 2], status: 'ACTIVE' },
-  { userId: 3, fullName: 'Supervisor B', role: 'SUPERVISOR', phone: '9000000003', homeAreaId: 3, zoneIds: [3, 4], status: 'ACTIVE' },
+  { userId: 3, fullName: 'Supervisor B', role: 'SUPERVISOR', phone: '9000000003', homeAreaId: 3, zoneIds: [3, 4, 6], status: 'ACTIVE' },
   { userId: 4, fullName: 'Asha', role: 'OPERATOR', phone: '9000000004', homeAreaId: 3, zoneIds: [], status: 'ACTIVE' },
   { userId: 5, fullName: 'Ravi', role: 'OPERATOR', phone: '9000000005', homeAreaId: 3, zoneIds: [], status: 'ACTIVE' },
   { userId: 6, fullName: 'Meena', role: 'OPERATOR', phone: '9000000006', homeAreaId: 3, zoneIds: [], status: 'ACTIVE' },
   { userId: 7, fullName: 'Suresh', role: 'OPERATOR', phone: '9000000007', homeAreaId: 3, zoneIds: [], status: 'ACTIVE' },
   { userId: 8, fullName: 'Pooja', role: 'OPERATOR', phone: '9000000008', homeAreaId: 3, zoneIds: [], status: 'ACTIVE' },
   { userId: 9, fullName: 'Kiran', role: 'OPERATOR', phone: '9000000009', homeAreaId: 1, zoneIds: [], status: 'ACTIVE' },
+  { userId: 10, fullName: 'Sonali', role: 'OPERATOR', phone: '9000000010', homeAreaId: 2, zoneIds: [], status: 'ACTIVE' },
+  // Works in two zones: quality check, and washing on busy days.
+  { userId: 11, fullName: 'Lakshmi', role: 'OPERATOR', phone: '9000000011', homeAreaId: 6, zoneIds: [1], status: 'ACTIVE' },
 ];
 
 const crops: Crop[] = [
@@ -54,12 +59,12 @@ const stages: Stage[] = [
 ];
 
 const recipes: MediaRecipe[] = [
-  { recipeId: 1, code: 'MU1', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
-  { recipeId: 2, code: 'MU2', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
-  { recipeId: 3, code: 'MU3', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
-  { recipeId: 4, code: 'RO1', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
-  { recipeId: 5, code: 'RO2', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
-  { recipeId: 6, code: 'RO3', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
+  { recipeId: 1, code: 'MU-01', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
+  { recipeId: 2, code: 'MU-02', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
+  { recipeId: 3, code: 'MU-03', phase: 'MULTIPLICATION', shelfLifeDays: 3, notes: '' },
+  { recipeId: 4, code: 'RO-01', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
+  { recipeId: 5, code: 'RO-02', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
+  { recipeId: 6, code: 'RO-03', phase: 'ROOTING', shelfLifeDays: 3, notes: '' },
 ];
 
 const alertRules: AlertRule[] = [
@@ -193,7 +198,7 @@ for (let ago = 95; ago >= 0; ago--) {
     if (!p || status === 'A') continue;
     const target = status === 'HD' ? p.target / 2 : p.target;
     const a: WorkAssignment = {
-      assignId: assignments.length + 1, workDate: date, operatorId: u.userId, batchId: p.batchId, stageId: stageId(p.stage),
+      assignId: assignments.length + 1, workDate: date, operatorId: u.userId, kind: 'SUBCULTURE', areaId: 3, batchId: p.batchId, stageId: stageId(p.stage),
       benchId: benchId(p.bench), targetBottles: target, assignedBy: 3,
     };
     assignments.push(a);
@@ -201,12 +206,16 @@ for (let ago = 95; ago >= 0; ago--) {
     const batchTrays = trays.filter((t) => t.batchId === p.batchId && t.stageId === a.stageId);
     let handled = ago === 0 ? 60 : Math.round(target * (p.pace + (rnd(ago, u.userId, 3) - 0.5) * 0.12));
     let k = 0;
+    const oneLine = ago > 12 || (u.userId === 6 && ago >= 1 && ago <= 5);
     while (handled > 0 && batchTrays.length) {
-      const n = ago > 12 ? handled : Math.min(30, handled);
+      const n = oneLine ? handled : Math.min(30, handled);
       const lost = rnd(u.userId, ago, k) < 0.25 ? 1 + Math.floor(rnd(k, ago) * 2) : 0;
       const t = batchTrays[(ago * 7 + k + u.userId) % batchTrays.length];
+      // Older days are kept as one typed-in total per operator; Meena typed her counts in by hand on the last few days.
+      const manual = ago > 12 || (u.userId === 6 && ago >= 1 && ago <= 5);
       entries.push({
-        entryId: entries.length + 1, assignId: a.assignId, operatorId: u.userId, trayId: t.trayId, movementId: null, contId: null, workDate: date,
+        entryId: entries.length + 1, assignId: a.assignId, operatorId: u.userId, kind: 'SUBCULTURE', source: manual ? 'MANUAL' : 'QR',
+        trayId: manual ? null : t.trayId, batchId: p.batchId, stageId: a.stageId, areaId: 3, movementId: null, contId: null, workDate: date,
         bottlesHandled: n, bottlesProduced: Math.round((n - lost) * growthOfStage(p.stage)), bottlesLost: lost,
         status: ago <= 1 ? 'PENDING' : 'VERIFIED', enteredAt: `${date}T${String(10 + Math.floor(k / 2)).padStart(2, '0')}:${k % 2 ? '40' : '10'}:00`,
         verifiedBy: ago <= 1 ? null : 3, verifiedAt: ago <= 1 ? null : `${date}T18:30:00`, note: '',
@@ -238,20 +247,41 @@ const mediaLots: MediaLot[] = [];
 const stockTxns: StockTxn[] = [];
 const txn = (itemId: number, txnType: StockTxn['txnType'], qty: number, ago: number, note: string, mediaLotId: number | null = null, doneBy = 2) =>
   stockTxns.push({ txnId: stockTxns.length + 1, itemId, txnType, qty, mediaLotId, txnDate: day(ago), doneBy, note });
-/** Media lots made in the last week. Recipe shelf life comes from Set-up, so older lots show as expired. */
+/** Media lots made in the last week by Sonali (media preparation). Recipe shelf life comes from Set-up, so older lots show as expired. */
 const lotPlan: Array<[string, number, number, number]> = [
-  // recipe, days ago, litres, bottles filled
-  ['MU1', 6, 20, 400], ['RO1', 5, 15, 300], ['MU2', 3, 20, 400], ['MU1', 1, 20, 400], ['RO1', 1, 15, 300], ['MU1', 0, 10, 200],
+  // media code, days ago, litres, bottles filled
+  ['MU-01', 6, 20, 400], ['RO-01', 5, 15, 300], ['MU-02', 3, 20, 400], ['MU-01', 2, 20, 400], ['RO-03', 1, 10, 200], ['MU-01', 1, 25, 500], ['MU-03', 0, 8, 150],
 ];
+/** Gives an operator a day as present (sample work needs them there). */
+const present = (userId: number, date: string) => {
+  const a = attendance.find((x) => x.userId === userId && x.workDate === date);
+  if (a) a.status = 'P';
+  else attendance.push({ attId: attendance.length + 1, userId, workDate: date, status: 'P', markedBy: 2 });
+};
+const lotNo: Record<string, number> = {};
 for (const [code, ago, litres, bottles] of lotPlan) {
   const r = recipes.find((x) => x.code === code)!;
   const id = mediaLots.length + 1;
   const prepared = day(ago);
-  const n = mediaLots.filter((l) => l.recipeId === r.recipeId && l.preparedOn === prepared).length;
+  // Media batch code in the expert's pattern, numbered within the year: B0001/26, B0002/26 …
+  const yy = prepared.slice(2, 4);
+  lotNo[yy] = (lotNo[yy] ?? 0) + 1;
+  const lotCode = `B${String(lotNo[yy]).padStart(4, '0')}/${yy}`;
   mediaLots.push({
-    mediaLotId: id, lotCode: `${code}-${prepared.slice(8, 10)}${prepared.slice(5, 7)}${n ? String.fromCharCode(65 + n) : ''}`, recipeId: recipeId(code),
-    preparedOn: prepared, volumeLitre: litres, bottlesFilled: bottles, expiresOn: addDays(prepared, r.shelfLifeDays), preparedBy: 2,
+    mediaLotId: id, lotCode, recipeId: recipeId(code),
+    preparedOn: prepared, volumeLitre: litres, bottlesFilled: bottles, expiresOn: addDays(prepared, r.shelfLifeDays), preparedBy: 10,
   });
+  // The supervisor gave Sonali this media to make, and she entered the bottles made.
+  if (new Date(prepared + 'T12:00:00').getDay() !== 0) {
+    present(10, prepared);
+    const assignId = assignments.length + 1;
+    assignments.push({ assignId, workDate: prepared, operatorId: 10, kind: 'MEDIA', areaId: 2, batchId: null, stageId: null, benchId: benchId('MP-1'), targetBottles: bottles, recipeId: r.recipeId, mediaBatchCode: lotCode, assignedBy: 2 });
+    entries.push({
+      entryId: entries.length + 1, assignId, operatorId: 10, kind: 'MEDIA', source: 'MANUAL', trayId: null, batchId: null, stageId: null, areaId: 2, mediaLotId: id,
+      movementId: null, contId: null, workDate: prepared, bottlesHandled: bottles, bottlesProduced: bottles, bottlesLost: 0,
+      status: ago <= 1 ? 'PENDING' : 'VERIFIED', enteredAt: `${prepared}T15:00:00`, verifiedBy: ago <= 1 ? null : 2, verifiedAt: ago <= 1 ? null : `${prepared}T18:00:00`, note: '',
+    });
+  }
   // chemicals used for this lot (sample quantities)
   txn(1, 'OUT', litres / 10, ago, 'For media', id);
   txn(2, 'OUT', litres * 0.03, ago, 'For media', id);
@@ -259,6 +289,69 @@ for (const [code, ago, litres, bottles] of lotPlan) {
   txn(code.startsWith('MU') ? 4 : 5, 'OUT', litres * 0.05, ago, 'For media', id);
   txn(9, 'OUT', bottles, ago, 'For media', id);
 }
+
+// ---------------- washing and quality check sample work ----------------
+// Bottles emptied at sub-culture go to the wash area, contaminated ones as a separate count (see lib/work.ts).
+// Each morning Kiran is given the bottles waiting (up to 600); Lakshmi washes what is left over, on top of her quality checks.
+{
+  let plain = 0;
+  let cont = 0;
+  const line = (date: string, operatorId: number, kind: WorkKind, areaId: number, bench: string, target: number, extra: Partial<WorkAssignment> = {}) => {
+    const assignId = assignments.length + 1;
+    assignments.push({ assignId, workDate: date, operatorId, kind, areaId, batchId: null, stageId: null, benchId: benchId(bench), targetBottles: target, assignedBy: areaId === 1 ? 2 : 3, ...extra });
+    return assignId;
+  };
+  const entry = (assignId: number, date: string, ago: number, operatorId: number, kind: WorkKind, areaId: number, handled: number, more: Partial<ProductionEntry> = {}) =>
+    entries.push({
+      entryId: entries.length + 1, assignId, operatorId, kind, source: 'MANUAL', trayId: null, batchId: null, stageId: null, areaId,
+      movementId: null, contId: null, workDate: date, bottlesHandled: handled, bottlesProduced: 0, bottlesLost: 0,
+      status: ago <= 1 ? 'PENDING' : 'VERIFIED', enteredAt: `${date}T16:30:00`, verifiedBy: ago <= 1 ? null : areaId === 1 ? 2 : 3, verifiedAt: ago <= 1 ? null : `${date}T18:30:00`, note: '', ...more,
+    });
+  const isPresent = (userId: number, date: string) => attendance.find((a) => a.userId === userId && a.workDate === date)?.status;
+  for (let ago = 95; ago >= 0; ago--) {
+    const date = day(ago);
+    if (new Date(date + 'T12:00:00').getDay() !== 0) {
+      const kiran = isPresent(9, date);
+      const lakshmi = isPresent(11, date);
+      // Washing: what was waiting at the start of the day.
+      if (kiran && kiran !== 'A' && plain + cont > 0) {
+        const t = Math.min(plain, kiran === 'HD' ? 300 : 600);
+        const id = line(date, 9, 'WASH', 1, 'W-1', t, { targetContaminated: cont });
+        const done = Math.round(t * (0.93 + rnd(9, ago) * 0.07));
+        entry(id, date, ago, 9, 'WASH', 1, done + cont, { contaminated: cont });
+        plain -= done;
+        cont = 0;
+      }
+      if (lakshmi && lakshmi !== 'A') {
+        // Quality checks every day she is in.
+        const half = lakshmi === 'HD' ? 0.5 : 1;
+        const qc = line(date, 11, 'QC_CULTURE', 6, 'QC-1', 300 * half);
+        const qm = line(date, 11, 'QC_MEDIA', 6, 'QC-1', 100 * half);
+        if (ago > 0) {
+          const c = Math.round(300 * half * (0.9 + rnd(11, ago) * 0.12));
+          entry(qc, date, ago, 11, 'QC_CULTURE', 6, c, { bottlesLost: Math.floor(rnd(ago, 11) * 4) });
+          entry(qm, date, ago, 11, 'QC_MEDIA', 6, Math.round(100 * half * (0.92 + rnd(ago, 12) * 0.08)), { bottlesLost: rnd(ago, 13) < 0.2 ? 1 : 0 });
+        }
+        // Washing help in her second zone when there is a lot waiting.
+        if (plain > 100 && ago > 0) {
+          const t = Math.min(plain, 300);
+          const id = line(date, 11, 'WASH', 1, 'W-2', t);
+          const done = Math.round(t * (0.9 + rnd(ago, 14) * 0.1));
+          entry(id, date, ago, 11, 'WASH', 1, done, { contaminated: 0 });
+          plain -= done;
+        }
+      }
+    }
+    // Bottles emptied and contaminated today reach the wash area for tomorrow.
+    for (const e of entries) {
+      if (e.workDate !== date || (e.kind ?? 'SUBCULTURE') !== 'SUBCULTURE') continue;
+      plain += e.bottlesHandled - e.bottlesLost;
+      if (e.contId === null) cont += e.bottlesLost;
+    }
+    for (const c of contaminations) if (c.foundOn === date) cont += c.bottlesLost;
+  }
+}
+
 txn(2, 'IN', 25, 20, 'Received', null, 1);
 txn(9, 'IN', 3000, 15, 'Received', null, 1);
 txn(8, 'OUT', 5, 4, 'Cleaning the hoods');

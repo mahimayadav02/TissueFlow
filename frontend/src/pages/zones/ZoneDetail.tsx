@@ -27,6 +27,8 @@ export default function ZoneDetail() {
   const base = basePath(user);
   const isHardening = z?.areaType === 'HARDENING';
   const unit = isHardening ? 'plants' : 'bottles';
+  // Washing, media and quality check rooms hold no culture trays.
+  const keepsTrays = !!z && z.benches > 0 && !['WASH', 'MEDIA', 'QC'].includes(z.areaType);
 
   return (
     <>
@@ -43,8 +45,9 @@ export default function ZoneDetail() {
           <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             {z.operators > 0 && <Kpi label="Operators present" value={`${z.present} / ${z.operators}`} note={z.marked < z.operators ? `${z.operators - z.marked} not marked yet` : 'all marked'} />}
             {z.operators > 0 && <Kpi label="Bottles handled" value={fmt(z.handled)} note={z.target ? `of ${fmt(z.target)} target (${z.pct}%)` : 'no work given'} />}
-            {z.benches > 0 && <Kpi label={`Trays here`} value={fmt(z.trays)} note={`${fmt(z.bottles)} ${unit} · benches ${z.capacity ? Math.round((100 * z.trays) / z.capacity) : 0}% full`} />}
+            {keepsTrays && <Kpi label={`Trays here`} value={fmt(z.trays)} note={`${fmt(z.bottles)} ${unit} · benches ${z.capacity ? Math.round((100 * z.trays) / z.capacity) : 0}% full`} />}
             {z.media && <Kpi label="Media ready" value={fmt(z.media.bottles)} note={`${z.media.lots} usable lots`} />}
+            {z.wash && <Kpi label="Waiting to be washed" value={fmt(z.wash.plain)} note={`+ ${fmt(z.wash.contaminated)} contaminated`} help="Bottles emptied at sub-culture come here by themselves; contaminated bottles are counted separately." />}
             {z.room && <Kpi label="Room now" value={`${z.room.tempC} °C`} note={`${z.room.humidityPct}% humidity · ${z.room.status === 'CRITICAL' ? 'critical' : z.room.status === 'WARNING' ? 'warning' : 'in range'}`} />}
             <Kpi label="Lost, 30 days" value={fmt(z.lost30)} note={`${unit} in trays kept here`} />
             <Kpi label="Open alerts" value={z.openAlerts} note={z.criticalAlerts ? `${z.criticalAlerts} critical` : 'none critical'} />
@@ -55,9 +58,7 @@ export default function ZoneDetail() {
               <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
                 <Card title={`Operators · ${fmtDate(date)}`} action={user.role !== 'OPERATOR' && <Link to="/s/assign" className="text-sm font-semibold text-forest-700 underline">Give work</Link>}>
                   <BoardTable rows={z.board} loading={false} showZone={false} />
-                  {z.board.every((r) => !r.target) && (
-                    <p className="mt-3 text-xs text-ink-muted">No bottle targets here: work given in the app is batch-and-stage work (sub-culturing). Attendance still counts for this zone.</p>
-                  )}
+                  {z.board.every((r) => !r.target) && <p className="mt-3 text-xs text-ink-muted">No work given in this zone on this day yet.</p>}
                 </Card>
                 <Card title="Handled vs target, last 14 days">
                   <BarChart
@@ -84,7 +85,7 @@ export default function ZoneDetail() {
               </Card>
             )}
 
-            {z.benches > 0 && (
+            {keepsTrays && (
               <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
                 <Card title={`What is kept here (${fmt(z.trays)} trays)`} action={<Link to={`${base}/trays`} className="text-sm font-semibold text-forest-700 underline">All trays</Link>}>
                   <Table<Detail['byStage'][number]>

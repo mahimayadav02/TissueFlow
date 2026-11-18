@@ -4,6 +4,7 @@
 import { ApiError, copy, daysBetween, need, today, wait } from './apiUtil';
 import { db, nextId, save } from './store';
 import type { Batch, Contamination, LossCause, LossType, Sample, Stage, Tray, TrayMovement, User } from './types';
+import { workZones } from './work';
 
 const TRAY_MAX = 30;
 
@@ -20,12 +21,12 @@ const cropName = (cropId: number) => {
 export function visibleAreas(user: User): number[] | null {
   if (user.role === 'MANAGER') return null;
   if (user.role === 'SUPERVISOR') return user.zoneIds;
-  return user.homeAreaId ? [user.homeAreaId] : [];
+  return workZones(user);
 }
 /** Batches an operator has been given work on today. They may open those trays even if the trays sit in another zone. */
 export function assignedBatchIds(user: User): Set<number> {
   const d = today();
-  return new Set(db.assignments.filter((a) => a.operatorId === user.userId && a.workDate === d).map((a) => a.batchId));
+  return new Set(db.assignments.filter((a) => a.operatorId === user.userId && a.workDate === d && a.batchId !== null).map((a) => a.batchId as number));
 }
 const canSeeTray = (user: User, t: Tray) => {
   const areas = visibleAreas(user);
@@ -158,10 +159,130 @@ function makeTrays(batch: Batch, stageId: number, benchId: number, bottles: numb
   return made;
 }
 
-function addMovement(m: Omit<TrayMovement, 'movementId' | 'movedAt'>): number {
+function addMovement(m: Omit<TrayMovement, 'movementId' | 'movedAt'>, movedAt = new Date().toISOString()): number {
   const movementId = nextId(db.movements, 'movementId');
-  db.movements.push({ ...m, movementId, movedAt: new Date().toISOString() });
+  db.movements.push({ ...m, movementId, movedAt });
   return movementId;
+}
+
+/** Checks that a media lot can fill this many new bottles for the stage they go to. */
+function checkLot(mediaLotId: number | null | undefined, to: Stage, bottlesOut: number) {
+  if (!mediaLotId) return;
+  const lot = db.mediaLots.find((l) => l.mediaLotId === mediaLotId);
+  need(lot, 'Media lot not found.');
+  const recipe = db.recipes.find((r) => r.recipeId === lot!.recipeId);
+  need(recipe?.phase === to.phase, `Lot ${lot!.lotCode} is ${recipe?.code ?? ''} medium, not for ${to.code}.`);
+  need(today() <= lot!.expiresOn, `Lot ${lot!.lotCode} expired on ${lot!.expiresOn}.`);
+  const used = db.trays.filter((t) => t.mediaLotId === lot!.mediaLotId).reduce((n, t) => n + (t.startBottles ?? t.bottleCount), 0);
+  need(used + bottlesOut <= lot!.bottlesFilled, `Lot ${lot!.lotCode} has only ${Math.max(0, lot!.bottlesFilled - used)} bottles left.`);
+}
+
+/** Input for a sub-culture typed in by hand: batch, stage and counts instead of one scanned tray. */
+export interface CountSubcultureInput {
+  batchId: number;
+  stageId: number;
+  bottlesHandled: number;
+  bottlesOut: number;
+  bottlesLost: number;
+  toStageId: number;
+  toBenchId: number;
+  mediaLotId?: number | null;
+  cause?: LossCause;
+  contType?: LossType;
+}
+
+/** Bottles of one batch and stage that a user can reach, in trays oldest first. */
+export function traysFor(batchId: number, stageId: number, user: User): Tray[] {
+  return db.trays
+    .filter((t) => t.batchId === batchId && t.stageId === stageId && t.status === 'ACTIVE' && t.bottleCount > 0 && canSeeTray(user, t))
+    .sort((a, b) => a.placedOn.localeCompare(b.placedOn) || a.trayId - b.trayId);
+}
+
+/**
+ * Sub-culture typed in by hand. Bottles are taken from that batch and stage's trays, oldest first
+ * (a tray partly used keeps the rest), new trays are made for the new bottles, and losses are recorded.
+ * `doer` is whose zones decide which trays can be used (the operator, or the supervisor entering for them).
+ */
+export function subcultureByCount(input: CountSubcultureInput, doer: User, reporter: User, date = today()) {
+  const from = stageOf(input.stageId);
+  const to = stageOf(input.toStageId);
+  const batch = db.batches.find((b) => b.batchId === input.batchId);
+  need(batch && batch.status === 'RUNNING', 'Choose a running batch.');
+  need(from, 'Choose the stage the bottles were at.');
+  need(to, 'Choose the stage the new bottles go to.');
+  need(to!.seqNo >= from!.seqNo, 'Bottles cannot go back to an earlier stage.');
+  need(benchOf(input.toBenchId), 'Choose a bench or rack for the new bottles.');
+  const { bottlesHandled: n, bottlesOut: out, bottlesLost: lost } = input;
+  need([n, out, lost].every((x) => Number.isInteger(x) && x >= 0), 'Bottle counts must be whole numbers, 0 or more.');
+  need(n > 0, 'Enter the bottles handled.');
+  const trays = traysFor(input.batchId, input.stageId, doer);
+  const have = trays.reduce((k, t) => k + t.bottleCount, 0);
+  // Nothing recorded yet for this batch and stage (a batch the lab started before using the app):
+  // the work is still recorded and its new bottles become the first trays in the system.
+  const untracked = !db.trays.some((t) => t.batchId === input.batchId && t.stageId === input.stageId && t.status === 'ACTIVE' && t.bottleCount > 0);
+  if (!untracked) {
+    need(have > 0, `The ${batch!.batchCode} trays at ${from!.code} are in another zone. Ask your supervisor.`);
+    need(n <= have, `${batch!.batchCode} has only ${have} bottles at ${from!.code} recorded in your zones. Check the count.`);
+  }
+  need(lost <= n, 'Lost bottles cannot be more than bottles handled.');
+  need(out > 0 || lost === n, 'Enter the new bottles made, or mark all bottles as lost.');
+  const maxOut = (n - lost) * 6;
+  need(out <= maxOut, `${out} new bottles from ${n - lost} good bottles is more than 6 times. Check the count (at most ${maxOut}).`);
+  if (lost > 0) need(input.cause && input.contType, 'Choose the cause and type of the loss.');
+  checkLot(input.mediaLotId, to!, out);
+
+  // Take bottles from the oldest trays first.
+  const taken: { trayId: number; bottles: number }[] = [];
+  let left = n;
+  for (const t of trays) {
+    if (left <= 0) break;
+    const k = Math.min(left, t.bottleCount);
+    taken.push({ trayId: t.trayId, bottles: k });
+    t.bottleCount -= k;
+    if (t.bottleCount === 0) t.status = 'MOVED';
+    left -= k;
+  }
+  const made = out > 0 ? makeTrays(batch!, to!.stageId, input.toBenchId, out, input.mediaLotId ?? null) : [];
+  // The loss is recorded against the first tray the bottles came from (or, if none were recorded, the first new tray).
+  const first = taken.length ? db.trays.find((t) => t.trayId === taken[0].trayId)! : made[0] ?? { trayId: 0, benchId: input.toBenchId };
+  let contId: number | null = null;
+  if (lost > 0 && first.trayId) {
+    contId = nextId(db.contaminations, 'contId');
+    db.contaminations.push({ contId, trayId: first.trayId, bottlesLost: lost, cause: input.cause!, contType: input.contType!, foundOn: date, reportedBy: reporter.userId, note: 'Found at sub-culture (typed in)' });
+  }
+  const movementId = addMovement({
+    batchId: batch!.batchId, trayId: first.trayId, newTrayIds: made.map((m) => m.trayId), takenTrayIds: taken.map((x) => x.trayId),
+    fromStageId: from!.stageId, toStageId: to!.stageId, fromBenchId: first.benchId, toBenchId: input.toBenchId,
+    bottlesIn: n, bottlesOut: out, bottlesLost: lost, movedBy: reporter.userId,
+  }, date === today() ? undefined : `${date}T17:00:00`);
+  return { made, taken, movementId, contId, untracked };
+}
+
+/**
+ * Finds a running batch by its code, or adds it when the lab types a batch that is not in the app yet
+ * (for example one started before the app was used). A new batch needs its crop.
+ */
+export function ensureBatch(code: string, cropId: number | null | undefined, date = today()): { batch: Batch; created: boolean } {
+  const c = code.trim().toUpperCase().replace(/\s+/g, '');
+  need(c.length >= 2 && c.length <= 20, 'Type the batch code, for example B1-26.');
+  const found = db.batches.find((b) => b.batchCode.toUpperCase() === c);
+  if (found) {
+    need(found.status === 'RUNNING', `Batch ${found.batchCode} is closed.`);
+    return { batch: found, created: false };
+  }
+  need(db.crops.some((x) => x.cropId === cropId), `Batch ${c} is new. Choose its crop so it can be added.`);
+  const batch: Batch = { batchId: nextId(db.batches, 'batchId'), batchCode: c, cropId: cropId!, parentBatchId: null, startDate: date, status: 'RUNNING' };
+  db.batches.push(batch);
+  return { batch, created: true };
+}
+
+/** A stage by its code, as typed (M6, m6). Stages come from Set-up. */
+export function stageByCode(code: string): Stage {
+  const c = code.trim().toUpperCase();
+  need(c, 'Type the stage, for example M6.');
+  const s = db.stages.find((x) => x.code.toUpperCase() === c);
+  need(s, `Stage ${c} is not in the stage list. The manager can add it in Crops, stages and media.`);
+  return s!;
 }
 
 export interface NewBatchInput {
@@ -321,15 +442,7 @@ export const productionApi = {
     need(input.bottlesOut <= maxOut, `${input.bottlesOut} new bottles from ${t!.bottleCount - input.bottlesLost} good bottles is more than 6 times. Check the count (at most ${maxOut}).`);
     if (input.bottlesLost > 0) need(input.cause && input.contType, 'Choose the cause and type of the loss.');
     const batch = db.batches.find((b) => b.batchId === t!.batchId)!;
-    if (input.mediaLotId) {
-      const lot = db.mediaLots.find((l) => l.mediaLotId === input.mediaLotId);
-      need(lot, 'Media lot not found.');
-      const recipe = db.recipes.find((r) => r.recipeId === lot!.recipeId);
-      need(recipe?.phase === to!.phase, `Lot ${lot!.lotCode} is ${recipe?.code ?? ''} medium, not for ${to!.code}.`);
-      need(today() <= lot!.expiresOn, `Lot ${lot!.lotCode} expired on ${lot!.expiresOn}.`);
-      const used = db.trays.filter((t) => t.mediaLotId === lot!.mediaLotId).reduce((n, t) => n + (t.startBottles ?? t.bottleCount), 0);
-      need(used + input.bottlesOut <= lot!.bottlesFilled, `Lot ${lot!.lotCode} has only ${Math.max(0, lot!.bottlesFilled - used)} bottles left.`);
-    }
+    checkLot(input.mediaLotId, to!, input.bottlesOut);
     const made = makeTrays(batch, to!.stageId, input.toBenchId, input.bottlesOut, input.mediaLotId ?? null);
     let contId: number | null = null;
     if (input.bottlesLost > 0) {
@@ -346,9 +459,10 @@ export const productionApi = {
     // An operator's sub-culture becomes a work entry for the supervisor to check.
     if (user.role === 'OPERATOR') {
       const d = today();
-      const assign = db.assignments.find((a) => a.operatorId === user.userId && a.workDate === d && a.batchId === t!.batchId && a.stageId === t!.stageId);
+      const assign = db.assignments.find((a) => a.operatorId === user.userId && a.workDate === d && (a.kind ?? 'SUBCULTURE') === 'SUBCULTURE' && a.batchId === t!.batchId && a.stageId === t!.stageId);
       db.entries.push({
-        entryId: nextId(db.entries, 'entryId'), assignId: assign?.assignId ?? null, operatorId: user.userId, trayId: t!.trayId, movementId, contId,
+        entryId: nextId(db.entries, 'entryId'), assignId: assign?.assignId ?? null, operatorId: user.userId, kind: 'SUBCULTURE', source: 'QR',
+        trayId: t!.trayId, batchId: t!.batchId, stageId: t!.stageId, areaId: assign?.areaId ?? user.homeAreaId, movementId, contId,
         workDate: d, bottlesHandled: t!.bottleCount, bottlesProduced: input.bottlesOut, bottlesLost: input.bottlesLost, status: 'PENDING',
         enteredAt: new Date().toISOString(), verifiedBy: null, verifiedAt: null, note: '',
       });

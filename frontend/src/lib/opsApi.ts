@@ -3,6 +3,7 @@
 import { addDays, copy, daysBetween, need, same, today, wait, type New } from './apiUtil';
 import { availability, batchCostSoFar, knownMonths, monthSummary, rateFor, type Availability, type MonthSummary } from './forecast';
 import { db, nextId, save } from './store';
+import { nextMediaBatchCode } from './work';
 import type { CostHeading, Decision, Delivery, Item, MediaLot, Phase, SalesOrder, Settings, StockTxn, TxnType, User } from './types';
 
 const nameOf = (id: number) => db.users.find((u) => u.userId === id)?.fullName ?? '—';
@@ -38,6 +39,8 @@ export interface LotRow extends MediaLot {
 
 export interface NewLotInput {
   recipeId: number;
+  /** Media batch code, e.g. B0001/26. Empty: the next free code is used. */
+  lotCode?: string;
   preparedOn: string;
   volumeLitre: number;
   bottlesFilled: number;
@@ -218,10 +221,9 @@ export const opsApi = {
       need(u.qty <= i!.stockQty, `Only ${i!.stockQty} ${i!.unit} of ${i!.name} in stock.`);
     }
     need(new Set(used.map((u) => u.itemId)).size === used.length, 'Each item can be listed only once.');
-    const dd = input.preparedOn.slice(8, 10) + input.preparedOn.slice(5, 7);
-    const base = `${r!.code}-${dd}`;
-    let code = base;
-    for (let k = 0; db.mediaLots.some((l) => l.lotCode === code); k++) code = base + String.fromCharCode(66 + k);
+    // Media batch code in the expert's pattern (B0001/26 …), or the one typed in.
+    const code = (input.lotCode ?? '').trim() || nextMediaBatchCode(input.preparedOn);
+    need(!db.mediaLots.some((l) => l.lotCode.toLowerCase() === code.toLowerCase()), `Batch code ${code} is already used.`);
     const lot: MediaLot = {
       mediaLotId: nextId(db.mediaLots, 'mediaLotId'), lotCode: code, recipeId: r!.recipeId, preparedOn: input.preparedOn,
       volumeLitre: input.volumeLitre, bottlesFilled: input.bottlesFilled, expiresOn: addDays(input.preparedOn, r!.shelfLifeDays), preparedBy: user.userId,

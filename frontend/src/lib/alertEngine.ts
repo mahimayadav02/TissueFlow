@@ -5,6 +5,7 @@
 import { addDays, daysBetween, today } from './apiUtil';
 import { latestReading, readings } from './iot';
 import { db, nextId, save } from './store';
+import { entryArea, kindOf, targetOf } from './work';
 import type { AlertRule, Severity } from './types';
 
 let lastRun = 0;
@@ -63,7 +64,7 @@ export function evaluateAlerts(force = false) {
   const lastDay = [...new Set(db.assignments.map((a) => a.workDate))].filter((d) => d < today()).sort().pop();
   if (lowOut && lastDay) {
     for (const u of db.users.filter((x) => x.role === 'OPERATOR' && x.status === 'ACTIVE')) {
-      const target = db.assignments.filter((a) => a.workDate === lastDay && a.operatorId === u.userId).reduce((n, a) => n + a.targetBottles, 0);
+      const target = db.assignments.filter((a) => a.workDate === lastDay && a.operatorId === u.userId).reduce((n, a) => n + targetOf(a), 0);
       if (!target) continue;
       const done = db.entries.filter((e) => e.workDate === lastDay && e.operatorId === u.userId && e.status !== 'REJECTED').reduce((n, e) => n + e.bottlesHandled, 0);
       const pct = Math.round((100 * done) / target);
@@ -78,8 +79,8 @@ export function evaluateAlerts(force = false) {
     const from = addDays(today(), -7);
     const byArea = new Map<number, { handled: number; lost: number }>();
     for (const e of db.entries) {
-      if (e.workDate < from || e.status === 'REJECTED') continue;
-      const a = db.users.find((u) => u.userId === e.operatorId)?.homeAreaId;
+      if (e.workDate < from || e.status === 'REJECTED' || kindOf(e) !== 'SUBCULTURE') continue;
+      const a = entryArea(e);
       if (!a) continue;
       const x = byArea.get(a) ?? { handled: 0, lost: 0 };
       x.handled += e.bottlesHandled;

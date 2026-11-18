@@ -7,8 +7,8 @@ import { latestReading, readings } from './iot';
 import { overdueLevel, visibleAreas, type Overdue } from './productionApi';
 import { db } from './store';
 import type { Alert, AreaType, LossCause, SensorReading, Severity, User } from './types';
+import { assignArea, entryArea, liveEntry, targetOf, washPool, workZones } from './work';
 
-const LIVE = (s: string) => s !== 'REJECTED';
 const stageCode = (id: number) => db.stages.find((s) => s.stageId === id)?.code ?? '—';
 const batchCode = (id: number) => db.batches.find((b) => b.batchId === id)?.batchCode ?? '—';
 
@@ -18,6 +18,7 @@ export const ZONE_PURPOSE: Record<AreaType, string> = {
   MEDIA: 'Culture media is prepared, poured into bottles and sterilised here.',
   INOCULATION: 'Operators sub-culture bottles under the laminar flow hoods here.',
   INCUBATION: 'Trays of cultures grow on racks here under controlled light and temperature.',
+  QC: 'Media bottles and culture bottles are checked here before they are used or moved on.',
   HARDENING: 'Rooted plants are moved to cocopeat and polybags and slowly get used to outside conditions.',
   STORE: 'Chemicals, bottles and other material are kept here.',
 };
@@ -65,6 +66,8 @@ export interface ZoneSummary {
   room: { tempC: number; humidityPct: number; status: Severity | null } | null;
   /** Media zone only: usable media lots and bottles of media ready. */
   media: { lots: number; bottles: number; lowStock: number } | null;
+  /** Washing zone only: bottles waiting to be washed (emptied at sub-culture) and contaminated bottles waiting. */
+  wash: { plain: number; contaminated: number } | null;
 }
 
 export interface ZoneDetail extends ZoneSummary {
@@ -83,11 +86,12 @@ export interface ZoneDetail extends ZoneSummary {
 
 function summary(areaId: number, date: string): ZoneSummary {
   const area = db.areas.find((a) => a.areaId === areaId)!;
-  const ops = db.users.filter((u) => u.role === 'OPERATOR' && u.status === 'ACTIVE' && u.homeAreaId === areaId);
+  // Operators who work here (as home zone or second zone); target and work count where the work was done.
+  const ops = db.users.filter((u) => u.role === 'OPERATOR' && u.status === 'ACTIVE' && workZones(u).includes(areaId));
   const opIds = new Set(ops.map((o) => o.userId));
   const att = db.attendance.filter((a) => a.workDate === date && opIds.has(a.userId));
-  const target = db.assignments.filter((a) => a.workDate === date && opIds.has(a.operatorId)).reduce((n, a) => n + a.targetBottles, 0);
-  const handled = db.entries.filter((e) => e.workDate === date && opIds.has(e.operatorId) && LIVE(e.status)).reduce((n, e) => n + e.bottlesHandled, 0);
+  const target = db.assignments.filter((a) => a.workDate === date && assignArea(a) === areaId).reduce((n, a) => n + targetOf(a), 0);
+  const handled = db.entries.filter((e) => e.workDate === date && entryArea(e) === areaId && liveEntry(e)).reduce((n, e) => n + e.bottlesHandled, 0);
   const benches = db.benches.filter((b) => b.areaId === areaId);
   const benchIds = new Set(benches.map((b) => b.benchId));
   const trays = db.trays.filter((t) => t.status === 'ACTIVE' && benchIds.has(t.benchId));
@@ -121,6 +125,7 @@ function summary(areaId: number, date: string): ZoneSummary {
     criticalAlerts: open.filter((a) => a.severity === 'CRITICAL').length,
     room: r ? { tempC: r.tempC, humidityPct: r.humidityPct, status: roomStatus(r) } : null,
     media,
+    wash: area.areaType === 'WASH' ? washPool() : null,
   };
 }
 
@@ -162,19 +167,19 @@ export const zonesApi = {
     const causes = new Map<LossCause, number>();
     for (const c of db.contaminations) if (c.foundOn >= from30 && trayIdsHere.has(c.trayId)) causes.set(c.cause, (causes.get(c.cause) ?? 0) + c.bottlesLost);
 
-    const ops = new Set(db.users.filter((u) => u.role === 'OPERATOR' && u.homeAreaId === areaId).map((u) => u.userId));
+    const ops = new Set(db.users.filter((u) => u.role === 'OPERATOR' && workZones(u).includes(areaId)).map((u) => u.userId));
     const daily: ZoneDetail['daily'] = [];
     for (let i = 13; i >= 0; i--) {
       const d = addDays(date, -i);
-      const target = db.assignments.filter((a) => a.workDate === d && ops.has(a.operatorId)).reduce((n, a) => n + a.targetBottles, 0);
-      const handled = db.entries.filter((e) => e.workDate === d && ops.has(e.operatorId) && LIVE(e.status)).reduce((n, e) => n + e.bottlesHandled, 0);
+      const target = db.assignments.filter((a) => a.workDate === d && assignArea(a) === areaId).reduce((n, a) => n + targetOf(a), 0);
+      const handled = db.entries.filter((e) => e.workDate === d && entryArea(e) === areaId && liveEntry(e)).reduce((n, e) => n + e.bottlesHandled, 0);
       if (target || handled) daily.push({ date: d, handled, target });
     }
 
     const labels = Object.fromEntries(db.alertRules.map((r) => [r.code, r.label]));
     const dev = db.devices.find((d) => d.areaId === areaId);
     const now = Date.now();
-    const board = (await dailyApi.dailyBoard(date, user)).filter((r) => ops.has(r.operatorId));
+    const board = (await dailyApi.dailyBoard(date, user, areaId)).filter((r) => ops.has(r.operatorId));
     const pct = s.pct;
     const lowOut = db.alertRules.find((r) => r.code === 'LOW_OUTPUT');
     const level: Level = pct === null || date >= today() ? 'NONE' : lowOut && lowOut.criticalValue !== null && pct < lowOut.criticalValue ? 'CRITICAL' : lowOut && pct < lowOut.warnValue ? 'WARNING' : 'OK';

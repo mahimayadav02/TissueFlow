@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Check, Undo2 } from 'lucide-react';
 import { EntryBadge } from '../../components/daily/bits';
 import { StageBadge } from '../../components/production/badges';
+import { KindTag } from '../../components/daily/WorkBits';
 import { Badge, Button, Card, ErrorText, Field, FormActions, Input, Modal, PageHeader, Table, Tabs } from '../../components/ui';
 import { api } from '../../lib/api';
 import { addDays, today } from '../../lib/apiUtil';
@@ -18,8 +19,8 @@ const growth = (e: EntryRow) => (e.bottlesHandled - e.bottlesLost > 0 ? e.bottle
 function flags(e: EntryRow): string[] {
   const f: string[] = [];
   const g = growth(e);
-  if (e.stageCode.startsWith('M') && (g > 4 || g < 1)) f.push(`growth × ${g.toFixed(1)}`);
-  if (e.bottlesHandled && e.bottlesLost / e.bottlesHandled > 0.2) f.push('high loss');
+  if (e.kind === 'SUBCULTURE' && e.stageCode.startsWith('M') && (g > 4 || g < 1)) f.push(`growth × ${g.toFixed(1)}`);
+  if (e.bottlesHandled && e.bottlesLost / e.bottlesHandled > 0.2) f.push(e.kind === 'SUBCULTURE' ? 'high loss' : 'many failed');
   if (e.unassigned) f.push('not in work given');
   return f;
 }
@@ -62,13 +63,28 @@ export default function VerifyEntries() {
   };
 
   const bottlesCol = {
-    key: 'n', header: 'Bottles: in → new', align: 'right' as const,
-    render: (e: EntryRow) => <span className="tabular-nums">{e.bottlesHandled} → <b>{fmt(e.bottlesProduced)}</b> <span className="text-xs text-ink-muted">(× {growth(e).toFixed(1)})</span></span>,
+    key: 'n', header: 'Bottles', align: 'right' as const,
+    render: (e: EntryRow) => e.kind === 'SUBCULTURE'
+      ? <span className="tabular-nums">{e.bottlesHandled} → <b>{fmt(e.bottlesProduced)}</b> <span className="text-xs text-ink-muted">(× {growth(e).toFixed(1)})</span></span>
+      : e.kind === 'WASH'
+        ? <span className="tabular-nums"><b>{fmt(e.bottlesHandled)}</b> washed{e.contaminated ? <span className="text-xs text-ink-muted"> ({e.contaminated} contaminated)</span> : ''}</span>
+        : <span className="tabular-nums"><b>{fmt(e.bottlesHandled)}</b> {e.kind === 'MEDIA' ? 'made' : 'checked'}</span>,
+  };
+  const workCol = {
+    key: 's', header: 'Work',
+    render: (e: EntryRow) => (
+      <div>
+        {e.kind === 'SUBCULTURE'
+          ? <span className="flex items-center gap-1.5">{e.batchCode} <StageBadge code={e.stageCode} /></span>
+          : <span className="flex flex-wrap items-center gap-1.5"><KindTag kind={e.kind} />{e.kind === 'MEDIA' && <span className="text-xs">{e.label}</span>}</span>}
+        <div className="mt-0.5 text-xs text-ink-muted">{e.areaName} · {e.source === 'QR' ? <>scan <span className="font-mono">{e.qrCode}</span></> : e.taken ? `typed in, ${e.qrCode}` : 'typed in'}</div>
+      </div>
+    ),
   };
 
   return (
     <>
-      <PageHeader help={HELP.verify} title="Check entries" subtitle="Every tray an operator sub-cultures waits here. Verified entries count in reports; a sent-back entry is undone if its new trays have not been touched." />
+      <PageHeader help={HELP.verify} title="Check entries" subtitle="Every piece of work an operator scans or types in waits here. Verified entries count in reports; a sent-back entry is undone if nothing has used what it made." />
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[{ id: 'pending', label: `To check (${pending.length})` }, { id: 'done', label: 'Checked, last 7 days' }]} />
       <ErrorText>{error || actionError}</ErrorText>
       {msg && <p className="mb-4 rounded-lg bg-forest-50 px-3 py-2 text-sm text-forest-700">{msg}</p>}
@@ -89,10 +105,9 @@ export default function VerifyEntries() {
                 key: 'p', header: '', render: (e) => <input type="checkbox" aria-label={`Select entry ${e.qrCode}`} checked={picked.includes(e.entryId)} onChange={() => toggle(e.entryId)} />,
               },
               { key: 'o', header: 'Operator', render: (e) => <div><div className="font-semibold">{e.operatorName}</div><div className="text-xs text-ink-muted">{time(e.enteredAt)}</div></div> },
-              { key: 't', header: 'Tray', render: (e) => <span className="font-mono text-[13px]">{e.qrCode}</span> },
-              { key: 's', header: 'Stage', render: (e) => <span className="flex items-center gap-1.5">{e.batchCode} <StageBadge code={e.stageCode} /></span> },
+              workCol,
               bottlesCol,
-              { key: 'l', header: 'Lost', align: 'right', render: (e) => (e.bottlesLost ? <span className="text-redx-700">{e.bottlesLost}</span> : 0) },
+              { key: 'l', header: 'Lost / failed', align: 'right', render: (e) => (e.bottlesLost ? <span className="text-redx-700">{e.bottlesLost}</span> : 0) },
               { key: 'f', header: 'Look at', render: (e) => <div className="flex flex-wrap gap-1">{flags(e).map((f) => <Badge key={f} tone="amber">{f}</Badge>)}</div> },
               {
                 key: 'a', header: '', render: (e) => (
@@ -119,8 +134,7 @@ export default function VerifyEntries() {
             columns={[
               { key: 'd', header: 'Day', render: (e) => new Date(e.workDate + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) },
               { key: 'o', header: 'Operator', render: (e) => e.operatorName },
-              { key: 't', header: 'Tray', render: (e) => <span className="font-mono text-[13px]">{e.qrCode}</span> },
-              { key: 's', header: 'Stage', render: (e) => <span className="flex items-center gap-1.5">{e.batchCode} <StageBadge code={e.stageCode} /></span> },
+              workCol,
               bottlesCol,
               { key: 'st', header: 'Result', render: (e) => <div><EntryBadge status={e.status} />{e.note && <div className="mt-1 text-xs text-ink-muted">“{e.note}”</div>}</div> },
               { key: 'b', header: 'Checked by', render: (e) => <span className="text-ink-muted">{e.verifiedByName ?? '—'}</span> },
@@ -129,7 +143,15 @@ export default function VerifyEntries() {
         </Card>
       )}
 
-      {rejecting && <RejectForm entry={rejecting} onClose={() => setRejecting(null)} onDone={(undone) => { setMsg(undone ? 'Sent back. The sub-culture was undone: the new trays were removed and the old tray is active again. Throw away the new labels.' : 'Sent back. The tray records were not changed (the new trays are already in use); correct them on the Trays page if needed.'); setPicked([]); reload(); }} />}
+      {rejecting && <RejectForm entry={rejecting} onClose={() => setRejecting(null)} onDone={(undone) => {
+        const k = rejecting.kind;
+        setMsg(k === 'SUBCULTURE'
+          ? undone ? 'Sent back. The sub-culture was undone: the new trays were removed and the bottles are back in their trays. Throw away the new labels.' : 'Sent back. The tray records were not changed (the new trays are already in use); correct them on the Trays page if needed.'
+          : k === 'MEDIA'
+            ? undone ? 'Sent back. The bottles were taken off their media batch.' : 'Sent back. The media batch was not changed (its bottles are already in use).'
+            : 'Sent back. It no longer counts towards the target' + (k === 'WASH' ? ', and the bottles are back in the wash area count.' : '.'));
+        setPicked([]); reload();
+      }} />}
     </>
   );
 }
@@ -155,18 +177,24 @@ function RejectForm({ entry, onClose, onDone }: { entry: EntryRow; onClose: () =
     }
   };
   return (
-    <Modal title={`Send back ${entry.qrCode}`} onClose={onClose}>
+    <Modal title={`Send back ${entry.source === 'QR' ? entry.qrCode : entry.label}`} onClose={onClose}>
       <p className="mb-4 text-sm">
-        {entry.operatorName} entered <b>{entry.bottlesHandled}</b> bottles in, <b>{entry.bottlesProduced}</b> new, <b>{entry.bottlesLost}</b> lost.
+        {entry.kind === 'SUBCULTURE'
+          ? <>{entry.operatorName} entered <b>{entry.bottlesHandled}</b> bottles in, <b>{entry.bottlesProduced}</b> new, <b>{entry.bottlesLost}</b> lost.</>
+          : <>{entry.operatorName} entered <b>{entry.bottlesHandled}</b> bottles {entry.kind === 'WASH' ? 'washed' : entry.kind === 'MEDIA' ? 'made' : 'checked'}.</>}
       </p>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label="Reason" hint="The operator sees this on their phone.">
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. new bottle count is wrong, recount tray" autoFocus />
         </Field>
         <p className={`rounded-lg px-3 py-2 text-sm ${entry.undoable ? 'bg-amberx-100 text-amberx-700' : 'bg-black/[0.04] text-ink-muted'}`}>
-          {entry.undoable
-            ? 'The new trays from this entry have not been touched, so they will be removed and the old tray made active again.'
-            : 'The tray records will stay as they are (sample entry, or the new trays are already in use).'}
+          {entry.kind === 'SUBCULTURE'
+            ? entry.undoable
+              ? 'The new trays from this entry have not been touched, so they will be removed and the bottles put back in their trays.'
+              : 'The tray records will stay as they are (sample entry, or the new trays are already in use).'
+            : entry.kind === 'MEDIA'
+              ? entry.undoable ? 'The bottles will be taken off their media batch.' : 'The media batch stays as it is (its bottles are already in use).'
+              : 'It will stop counting towards the target. Nothing else changes.'}
         </p>
         <ErrorText>{error}</ErrorText>
         <FormActions>

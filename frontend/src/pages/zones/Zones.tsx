@@ -62,6 +62,7 @@ export default function Zones() {
                 <Progress pct={z.pct} level="NONE" />
               </div>
             )}
+            {z.wash && <p className="mt-3 text-sm">{fmt(z.wash.plain)} bottles waiting to be washed · {fmt(z.wash.contaminated)} contaminated</p>}
             {z.media && <p className="mt-3 text-sm">{z.media.lots} usable media lots · {fmt(z.media.bottles)} bottles ready{z.media.lowStock ? <span className="text-redx-700"> · {z.media.lowStock} items to reorder</span> : ''}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
               {z.room && <Badge tone={z.room.status === 'CRITICAL' ? 'red' : z.room.status === 'WARNING' ? 'amber' : 'green'}><Thermometer size={12} className="mr-1 inline" />{z.room.tempC} °C · {z.room.humidityPct}%</Badge>}

@@ -71,7 +71,7 @@ export default function Users() {
               key: 'z', header: 'Zone(s)', render: (u) =>
                 u.role === 'MANAGER' ? <span className="text-ink-muted">All zones</span>
                   : u.role === 'SUPERVISOR' ? u.zoneIds.map(zoneName).join(', ')
-                    : zoneName(u.homeAreaId),
+                    : [u.homeAreaId, ...u.zoneIds.filter((z) => z !== u.homeAreaId)].map(zoneName).join(', '),
             },
             { key: 's', header: 'Can see', render: (u) => <span className="text-xs text-ink-muted">{SCOPE_OF[u.role]}</span> },
             {
@@ -112,18 +112,32 @@ function UserForm({ value, areas, isSelf, onClose, onSaved }: { value: New<User,
           <Input inputMode="numeric" maxLength={10} value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value.replace(/\D/g, '') })} />
         </Field>
         <Field label="Role" hint={isSelf ? 'You cannot change your own role.' : undefined}>
-          <Select value={v.role} disabled={isSelf} onChange={(e) => setV({ ...v, role: e.target.value as Role })}>
+          <Select value={v.role} disabled={isSelf} onChange={(e) => setV({ ...v, role: e.target.value as Role, zoneIds: [] })}>
             {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </Select>
         </Field>
 
         {v.role === 'OPERATOR' && (
-          <Field label="Works in zone">
-            <Select value={v.homeAreaId ?? ''} onChange={(e) => setV({ ...v, homeAreaId: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">Choose a zone</option>
-              {areas.map((a) => <option key={a.areaId} value={a.areaId}>{a.name}</option>)}
-            </Select>
-          </Field>
+          <>
+            <Field label="Main zone">
+              <Select value={v.homeAreaId ?? ''} onChange={(e) => { const h = e.target.value ? Number(e.target.value) : null; setV({ ...v, homeAreaId: h, zoneIds: v.zoneIds.filter((z) => z !== h) }); }}>
+                <option value="">Choose a zone</option>
+                {areas.map((a) => <option key={a.areaId} value={a.areaId}>{a.name}</option>)}
+              </Select>
+            </Field>
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1.5 text-sm font-semibold">Also works in</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {areas.filter((a) => a.areaId !== v.homeAreaId).map((a) => (
+                  <label key={a.areaId} className={cn('flex items-center gap-2 rounded-lg border px-3 py-2 text-sm', v.zoneIds.includes(a.areaId) ? 'border-forest-700 bg-forest-50' : 'border-line')}>
+                    <input type="checkbox" checked={v.zoneIds.includes(a.areaId)} onChange={() => toggleZone(a.areaId)} />
+                    {a.name}
+                  </label>
+                ))}
+              </div>
+              <span className="text-xs text-ink-muted">Optional. Tick a zone if this operator also gets work there; their output is counted in each zone separately.</span>
+            </fieldset>
+          </>
         )}
 
         {v.role === 'SUPERVISOR' && (

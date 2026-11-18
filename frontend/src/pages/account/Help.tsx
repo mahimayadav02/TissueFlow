@@ -13,22 +13,26 @@ const STEPS: Record<Role, { text: string; to: string; link: string }[]> = {
     { text: 'Add your staff and give each supervisor their zones.', to: '/m/setup/users', link: 'Users' },
     { text: 'Start a batch from the samples collected, and print QR labels for its trays.', to: '/m/batches', link: 'Batches' },
     { text: 'Each day, follow work against target on the dashboard and the zone pages.', to: '/m/zones', link: 'All zones' },
+    { text: 'See work done added up by day, then by operator, zone, work, batch or stage.', to: '/m/output', link: 'Work output' },
     { text: 'Enter the month’s costs; check orders against the forecast before saying yes.', to: '/m/orders', link: 'Orders' },
     { text: 'At month end, print or download the monthly report.', to: '/m/reports', link: 'Reports' },
   ],
   SUPERVISOR: [
     { text: 'At the start of the shift, mark who is present, on half day or absent.', to: '/s/attendance', link: 'Attendance' },
-    { text: 'Give each present operator their work: batch, stage, bench and target.', to: '/s/assign', link: 'Give work' },
+    { text: 'Give each present operator their work: batch and stage for sub-culture, bottles to wash, media to make, or bottles to check, with a target.', to: '/s/assign', link: 'Give work' },
     { text: 'During the day, watch your zones: work done, trays, losses and alerts.', to: '/s/zones', link: 'My zones' },
+    { text: 'If an operator tells you their counts, record them yourself with Record work on Give work.', to: '/s/assign', link: 'Give work' },
     { text: 'At the end of the shift, verify each entry or send it back with a reason.', to: '/s/verify', link: 'Check entries' },
+    { text: 'See the totals for any day or period, by operator, zone, batch or stage.', to: '/s/output', link: 'Work output' },
     { text: 'Record media lots and stock used, and acknowledge alerts you are dealing with.', to: '/s/media', link: 'Media and stock' },
   ],
   OPERATOR: [
     { text: 'Open Today to see the work your supervisor gave you.', to: '/o', link: 'Today' },
     { text: 'Before you sub-culture a tray, scan its label (or type its code).', to: '/o/scan', link: 'Scan tray' },
     { text: 'Enter the new bottles made and any lost, then stick the new tray codes on the new trays.', to: '/o/scan', link: 'Scan tray' },
+    { text: 'No label to scan, or washing, media or checking work? Type the batch, stage and bottles by hand.', to: '/o/enter', link: 'Record work' },
     { text: 'Found contaminated bottles? Report them with the cause.', to: '/o/loss', link: 'Report loss' },
-    { text: 'Check My output to see your days; an entry sent back shows its reason on Today.', to: '/o/output', link: 'My output' },
+    { text: 'Check My work to see all your work, day by day; an entry sent back shows its reason on Today.', to: '/o/output', link: 'My work' },
   ],
 };
 
@@ -44,7 +48,10 @@ const TERMS: [string, string][] = [
   ['Media lot', 'One batch of culture medium made from a recipe, with the date it was made and the date it must be used by.'],
   ['Cost per bottle-round', 'The month’s costs divided by the bottles handled that month. It is how a batch’s cost is worked out.'],
   ['Expected plants', 'Bottles now × growth for each round left × rooting survival × hardening survival.'],
-  ['Zone', 'A room or area of the lab, such as washing, inoculation or the growth room. Supervisors look after zones.'],
+  ['Zone', 'A room or area of the lab, such as washing, inoculation or the growth room. Supervisors look after zones; an operator can work in two.'],
+  ['Bottles to be washed', 'Every bottle emptied at sub-culture goes to the wash area count by itself; contaminated bottles are counted separately.'],
+  ['Media code and batch code', 'The media code is the recipe (MU-01 to MU-03 multiplication, RO-01 to RO-03 rooting). The batch code (like B0001/26) names one lot of media made.'],
+  ['Typed-in entry', 'Work entered by hand instead of a scan. For sub-culture, the bottles are taken from that batch and stage’s oldest trays.'],
 ];
 
 const FAQ: [string, string][] = [

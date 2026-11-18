@@ -6,6 +6,7 @@
 // Nothing here is stored; it is worked out from the records each time.
 import { addDays, daysBetween, today } from './apiUtil';
 import { db } from './store';
+import { entryBatch, kindOf } from './work';
 import type { CostHeading, Phase, Stage } from './types';
 
 const PHASE_ORDER: Record<Phase, number> = { INITIATION: 0, MULTIPLICATION: 1, ROOTING: 2, HARDENING: 3 };
@@ -24,9 +25,10 @@ export function handlings(): { date: string; batchId: number; bottles: number }[
   const linked = new Set(db.entries.filter((e) => e.movementId !== null).map((e) => e.movementId));
   const out: { date: string; batchId: number; bottles: number }[] = [];
   for (const e of db.entries) {
-    if (e.status === 'REJECTED') continue;
-    const t = db.trays.find((x) => x.trayId === e.trayId);
-    if (t) out.push({ date: e.workDate, batchId: t.batchId, bottles: e.bottlesHandled });
+    // Only sub-culture is handling of culture bottles (washing, media and checks are counted on the output page).
+    if (e.status === 'REJECTED' || kindOf(e) !== 'SUBCULTURE') continue;
+    const batchId = entryBatch(e);
+    if (batchId !== null) out.push({ date: e.workDate, batchId, bottles: e.bottlesHandled });
   }
   for (const m of db.movements) {
     if (linked.has(m.movementId) || isBenchMove(m)) continue;

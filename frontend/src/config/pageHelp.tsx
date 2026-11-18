@@ -4,8 +4,8 @@
 export const HELP = {
   dashboard: (
     <ul>
-      <li><b>Handled today</b> counts the bottles operators entered today against the targets supervisors gave.</li>
-      <li><b>Loss, 30 days</b> is bottles lost divided by bottles handled in the last 30 days.</li>
+      <li><b>Handled today</b> counts the bottles operators entered today, all work combined (sub-culture, washing, media, checks), against the targets supervisors gave.</li>
+      <li><b>Loss, 30 days</b> is bottles lost divided by bottles sub-cultured in the last 30 days.</li>
       <li><b>Plants ready in 6 months</b> adds up the forecast of every running batch.</li>
       <li><b>Profit</b> is last month’s plants sent × their order rate, minus the costs entered for that month.</li>
       <li>Hover a bar in the chart to see that day’s numbers.</li>
@@ -67,17 +67,28 @@ export const HELP = {
     </ol>
   ),
   assign: (
-    <ol>
-      <li>For each present operator, click <b>Add</b> and pick the batch, stage, bench and target in bottles.</li>
-      <li>The target cannot be more than the bottles of that batch and stage not yet given to someone else.</li>
-      <li><b>Copy last working day</b> repeats yesterday’s work for everyone who is present.</li>
-    </ol>
+    <ul>
+      <li>Click <b>Add</b> for an operator. The form follows their zone: <b>inoculation</b> asks for batch, stage, hood and bottles to sub-culture; <b>washing</b> shows the bottles and contaminated bottles waiting and asks how many of each to wash; <b>media preparation</b> shows the bottles ready for each media code and asks for the media code, batch code and bottles to be made; <b>quality check</b> asks for media or culture bottles to check.</li>
+      <li>An operator who works in two zones can get work in each. Each laminar-flow hood takes at most 2 operators a day.</li>
+      <li>Bottles emptied at sub-culture are added to the wash area count by themselves.</li>
+      <li>Work not finished by the end of the day is never taken out of stock, so it simply stays where it was for the next day.</li>
+      <li><b>Record work</b> lets you type in the counts an operator reports (up to 7 days back). What you enter counts as checked.</li>
+      <li><b>Copy last working day</b> repeats yesterday’s work for everyone who is present (media gets a new batch code).</li>
+    </ul>
   ),
   verify: (
     <ul>
-      <li>Every tray an operator sub-cultures waits here until you check it.</li>
-      <li><b>Verify</b> confirms the counts. <b>Send back</b> asks the operator to redo it; if the new trays were not touched, the sub-culture is undone.</li>
+      <li>Every piece of work an operator scans or types in waits here until you check it.</li>
+      <li><b>Verify</b> confirms the counts. <b>Send back</b> asks the operator to redo it. If nothing has used what it made, it is undone too: a sub-culture’s new trays are removed and the bottles go back to their trays; media bottles come off their batch.</li>
       <li><b>Look at</b> flags numbers worth a second look, such as unusual growth or high loss.</li>
+    </ul>
+  ),
+  output: (
+    <ul>
+      <li>The top numbers are every kind of work added together for the dates chosen: sub-culture, washing, media made and bottles checked.</li>
+      <li>Pick an operator, zone, work, batch or stage to narrow it down, or click any row in the tables below to filter by it.</li>
+      <li>An operator who works in two zones is counted in each zone for the work done there.</li>
+      <li>Only verified and waiting entries count; entries sent back do not. <b>Excel</b> downloads every table.</li>
     </ul>
   ),
   stock: (

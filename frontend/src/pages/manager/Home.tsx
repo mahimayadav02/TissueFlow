@@ -30,8 +30,8 @@ export default function ManagerHome() {
       <ErrorText>{error}</ErrorText>
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi help="Batches that still have live bottles or plants in any stage." label="Running batches" value={d ? d.runningBatches : '—'} note={d ? `${fmt(d.liveBottles)} live bottles` : undefined} />
-        <Kpi help="Bottles operators entered today, against the targets supervisors gave." label="Handled today" value={d ? fmt(d.today.handled) : '—'} note={d ? `of ${fmt(d.today.target)} target · ${d.today.present}/${d.today.operators} present` : undefined} />
-        <Kpi help="Bottles lost ÷ bottles handled in the last 30 days." label="Loss, 30 days" value={d ? `${lossPct.toFixed(1)}%` : '—'} note={d ? `${fmt(d.loss30.lost)} of ${fmt(d.loss30.handled)} bottles` : undefined} />
+        <Kpi help="Bottles operators entered today, all work combined (sub-culture, washing, media, checks), against the targets supervisors gave." label="Handled today" value={d ? fmt(d.today.handled) : '—'} note={d ? `of ${fmt(d.today.target)} target · ${d.today.present}/${d.today.operators} present` : undefined} />
+        <Kpi help="Bottles lost ÷ bottles sub-cultured in the last 30 days." label="Loss, 30 days" value={d ? `${lossPct.toFixed(1)}%` : '—'} note={d ? `${fmt(d.loss30.lost)} of ${fmt(d.loss30.handled)} bottles` : undefined} />
         <Kpi help="The forecast of every running batch, added up." label="Plants ready in 6 months" value={d ? fmt(d.plantsNext180) : '—'} note={<Link to="/m/forecast" className="underline">forecast</Link>} />
         <Kpi help="Orders not yet fully sent, and the plants still owed." label="Open orders" value={d ? d.openOrders : '—'} note={d ? `${fmt(d.plantsToSend)} plants to send` : undefined} />
         <Kpi help="Plants sent last month × their order rate, minus the costs entered for that month." label={`Profit, ${lmName || 'last month'}`} value={lm ? rupees(lm.profit) : '—'} note={lm ? `${rupees(lm.revenue)} in − ${rupees(lm.totalCost)} cost` : undefined} />

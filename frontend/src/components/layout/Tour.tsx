@@ -20,16 +20,17 @@ const STEPS: Record<Role, { title: string; text: string }[]> = {
   ],
   SUPERVISOR: [
     { title: 'Welcome to TissueFlow', text: 'You look after your own zones. This short tour shows your daily routine.' },
-    { title: 'Start of the shift', text: 'Mark attendance, then give each present operator their work: which batch, which stage, how many bottles.' },
+    { title: 'Start of the shift', text: 'Mark attendance, then give each present operator their work for their zone: sub-culture, washing, media or checking, with a target in bottles.' },
     { title: 'During the day', text: 'Your zone pages show work done against target, trays on the benches, losses and alerts as they happen.' },
-    { title: 'End of the shift', text: 'Check entries: verify each tray an operator entered, or send it back with a reason.' },
+    { title: 'End of the shift', text: 'Check entries: verify each one or send it back with a reason. Work output adds it all up by day, operator, zone, batch and stage.' },
     { title: 'Help is on every page', text: 'Open “How this page works” under a page title. The question mark at the top opens the full guide.' },
   ],
   OPERATOR: [
     { title: 'Welcome to TissueFlow', text: 'This app shows the work your supervisor gave you today and lets you record it.' },
     { title: 'Scan the tray', text: 'Tap Scan tray, point the camera at the label on the tray (or type its code), then enter the new bottles and any lost ones.' },
+    { title: 'No label? Record work', text: 'Tap Record work and type the batch, stage and bottles. Washing, media and checking work is entered here too.' },
     { title: 'Report a loss', text: 'Found contaminated bottles? Use Report loss, scan the tray and say how many and why.' },
-    { title: 'See your progress', text: 'My output shows what you did each day. If your supervisor sends an entry back, the reason shows on your home screen.' },
+    { title: 'See your progress', text: 'My work shows all your work, day by day. If your supervisor sends an entry back, the reason shows on your home screen.' },
   ],
 };
 

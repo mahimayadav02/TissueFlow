@@ -22,13 +22,14 @@ export interface Lab {
   phone: string;
 }
 
-export type AreaType = 'WASH' | 'MEDIA' | 'INOCULATION' | 'INCUBATION' | 'HARDENING' | 'STORE';
+export type AreaType = 'WASH' | 'MEDIA' | 'INOCULATION' | 'INCUBATION' | 'QC' | 'HARDENING' | 'STORE';
 
 export const AREA_TYPE_LABEL: Record<AreaType, string> = {
   WASH: 'Washing',
   MEDIA: 'Media preparation',
   INOCULATION: 'Inoculation',
   INCUBATION: 'Incubation (growth room)',
+  QC: 'Quality check',
   HARDENING: 'Hardening',
   STORE: 'Store',
 };
@@ -54,7 +55,10 @@ export interface User {
   role: Role;
   phone: string;
   homeAreaId: number | null;
-  /** Zones a supervisor looks after (user_area). Empty for manager and operator. */
+  /**
+   * Supervisor: the zones they look after. Operator: other zones they also work in, besides the home zone
+   * (one operator can work in two zones). Empty for the manager.
+   */
   zoneIds: number[];
   status: 'ACTIVE' | 'LEFT';
 }
@@ -185,6 +189,8 @@ export interface TrayMovement {
   bottlesIn: number;
   bottlesOut: number;
   bottlesLost: number;
+  /** Typed-in sub-culture: every tray bottles were taken from (trayId is the first of them). */
+  takenTrayIds?: number[];
   movedBy: number;
   movedAt: string; // ISO date-time
 }
@@ -231,33 +237,81 @@ export interface Attendance {
   markedBy: number;
 }
 
-/** Work a supervisor gives an operator for one day: which batch and stage, at which bench, how many bottles. */
+/**
+ * The kinds of work given out each day, one per kind of zone:
+ * SUBCULTURE (inoculation), WASH (washing), MEDIA (media preparation), QC_MEDIA and QC_CULTURE (quality check).
+ */
+export type WorkKind = 'SUBCULTURE' | 'WASH' | 'MEDIA' | 'QC_MEDIA' | 'QC_CULTURE';
+
+export const WORK_LABEL: Record<WorkKind, string> = {
+  SUBCULTURE: 'Sub-culture',
+  WASH: 'Washing',
+  MEDIA: 'Media making',
+  QC_MEDIA: 'Media quality check',
+  QC_CULTURE: 'Culture quality check',
+};
+
+/** Work a supervisor gives an operator for one day, in one zone, with a target in bottles. */
 export interface WorkAssignment {
   assignId: number;
   workDate: string;
   operatorId: number;
-  batchId: number;
-  stageId: number;
-  /** Laminar-flow bench (hood) where the operator works. */
+  /** Missing on older records: those are sub-culture work. */
+  kind?: WorkKind;
+  /** Zone where the work is done. */
+  areaId?: number | null;
+  /** Sub-culture only: which batch and stage. */
+  batchId: number | null;
+  stageId: number | null;
+  /** Bench (laminar-flow hood) where the operator works. At most 2 operators per hood per day. */
   benchId: number | null;
+  /** Sub-culture: bottles to sub-culture. Washing: bottles to wash. Media: bottles to make. QC: bottles to check. */
   targetBottles: number;
+  /** Washing only: contaminated bottles to wash, on top of targetBottles. */
+  targetContaminated?: number;
+  /** Media making only: the media code (recipe) and the batch code the new media bottles get, e.g. B0001/26. */
+  recipeId?: number | null;
+  mediaBatchCode?: string;
   assignedBy: number;
 }
 
 export type EntryStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
-/** One tray an operator sub-cultured. Created automatically when the operator saves a sub-culture. */
+/**
+ * One piece of work done. A QR scan of one tray, or a count typed in by hand (batch, stage and bottles,
+ * or bottles washed / media bottles made / bottles checked). Supervisors check every entry.
+ */
 export interface ProductionEntry {
   entryId: number;
   assignId: number | null;
   operatorId: number;
-  trayId: number;
+  /** Missing on older records: those are sub-culture work. */
+  kind?: WorkKind;
+  /** QR: the operator scanned a tray. MANUAL: the counts were typed in. */
+  source?: 'QR' | 'MANUAL';
+  /** The tray scanned (QR sub-culture). Null for work typed in by hand. */
+  trayId: number | null;
+  /** Kept on the entry so output can be added up by batch, stage and zone. */
+  batchId?: number | null;
+  stageId?: number | null;
+  areaId?: number | null;
+  /** Typed-in sub-culture: bottles taken from each tray of that batch and stage (oldest trays first). */
+  taken?: { trayId: number; bottles: number }[];
+  /** Washing: of the bottles washed, how many were contaminated ones. */
+  contaminated?: number;
+  /** Media making: the media lot the bottles went into. */
+  mediaLotId?: number | null;
+  /** Who typed it in, when a supervisor enters it for the operator. */
+  enteredBy?: number;
   /** The stage move this entry came from, so a rejected entry can be undone. */
   movementId: number | null;
   contId: number | null;
   workDate: string;
+  /** Sub-culture: bottles taken. Washing: bottles washed. Media: bottles made. QC: bottles checked. */
   bottlesHandled: number;
+  /** Sub-culture: new bottles made. Media: bottles made. Otherwise 0. */
   bottlesProduced: number;
+  /** Sub-culture: bottles lost. QC: bottles that failed the check. Otherwise 0. */
   bottlesLost: number;
   status: EntryStatus;
   enteredAt: string;

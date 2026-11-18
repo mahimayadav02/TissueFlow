@@ -9,6 +9,7 @@ import { resultsApi, writeAudit } from './resultsApi';
 import { zonesApi } from './zonesApi';
 import { opsApi } from './opsApi';
 import { productionApi } from './productionApi';
+import { workZones } from './work';
 
 export { ApiError, type New };
 import type { Alert, AlertRule, Area, Bench, Crop, Lab, MediaRecipe, Session, Stage, User } from './types';
@@ -98,7 +99,8 @@ const coreApi = {
     const row: User = {
       ...u,
       fullName: u.fullName.trim(),
-      zoneIds: u.role === 'SUPERVISOR' ? u.zoneIds : [],
+      // Operators: other zones they also work in (never the home zone again).
+      zoneIds: u.role === 'SUPERVISOR' ? u.zoneIds : u.role === 'OPERATOR' ? u.zoneIds.filter((z) => z !== u.homeAreaId) : [],
       homeAreaId: u.role === 'MANAGER' ? null : u.homeAreaId,
       userId: u.userId ?? nextId(db.users, 'userId'),
     };
@@ -197,7 +199,7 @@ const coreApi = {
     evaluateAlerts();
     const open = db.alerts.filter((a) => !a.ackAt);
     if (user.role === 'MANAGER') return copy(open).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const allowed = user.role === 'SUPERVISOR' ? user.zoneIds : user.homeAreaId ? [user.homeAreaId] : [];
+    const allowed = user.role === 'SUPERVISOR' ? user.zoneIds : workZones(user);
     return copy(open.filter((a) => a.areaId !== null && allowed.includes(a.areaId) && (user.role !== 'OPERATOR' || !a.userId || a.userId === user.userId)))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
@@ -208,14 +210,14 @@ const rawApi = { ...coreApi, ...productionApi, ...dailyApi, ...opsApi, ...result
 // ---------- audit log ----------
 // Every function that changes data is wrapped: after it succeeds, one line goes into the audit log
 // (who, what, and the main values). With the backend, the server writes the audit log instead.
-const CHANGES = /^(save|create|delete|mark|verify|reject|record|stockMove|subculture|move|split|close|cancel|recheck|copy|acknowledge)/;
+const CHANGES = /^(save|create|delete|mark|verify|reject|record|stockMove|subculture|move|split|close|cancel|recheck|copy|acknowledge|enter)/;
 const LABEL: Record<string, string> = {
   saveLab: 'Changed lab details', saveArea: 'Saved zone', deleteArea: 'Deleted zone', saveBench: 'Saved bench', deleteBench: 'Deleted bench',
   saveUser: 'Saved user', saveCrop: 'Saved crop', deleteCrop: 'Deleted crop', saveStage: 'Saved stage', deleteStage: 'Deleted stage',
   saveRecipe: 'Saved media recipe', deleteRecipe: 'Deleted media recipe', saveAlertRule: 'Changed alert limit',
   createBatch: 'Started batch', splitBatch: 'Split batch', closeBatch: 'Closed batch', subcultureTray: 'Sub-cultured tray', moveTrays: 'Moved trays',
   recordLoss: 'Recorded loss', markAttendance: 'Marked attendance', saveAssignment: 'Gave work', deleteAssignment: 'Removed work',
-  copyPreviousDay: 'Copied previous day’s work', verifyEntries: 'Verified entries', rejectEntry: 'Sent entry back',
+  copyPreviousDay: 'Copied previous day’s work', enterWork: 'Entered work done', verifyEntries: 'Verified entries', rejectEntry: 'Sent entry back',
   saveItem: 'Saved stock item', stockMove: 'Changed stock', createMediaLot: 'Made media lot', saveMonthCosts: 'Saved monthly costs',
   createOrder: 'Created order', recheckOrder: 'Checked order again', cancelOrder: 'Cancelled order', recordDelivery: 'Recorded plants sent',
   saveSettings: 'Changed forecast assumptions', acknowledgeAlerts: 'Acknowledged alerts',

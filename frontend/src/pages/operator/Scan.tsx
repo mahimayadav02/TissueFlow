@@ -33,7 +33,7 @@ export default function Scan({ mode = 'work' }: { mode?: 'work' | 'loss' }) {
     const cropId = batches.find((b) => b.batchId === t.batchId)?.cropId;
     return crops.find((c) => c.cropId === cropId)?.defaultGrowth ?? 2.8;
   };
-  const line = tray ? lines.find((l) => l.batchId === tray.batchId && l.stageCode === tray.stageCode) : undefined;
+  const line = tray ? lines.find((l) => l.kind === 'SUBCULTURE' && l.batchId === tray.batchId && l.stageCode === tray.stageCode) : undefined;
   const found = (t: TrayRow) => {
     setTray(t);
     setDone(null);
@@ -75,7 +75,12 @@ export default function Scan({ mode = 'work' }: { mode?: 'work' | 'loss' }) {
           </div>
         </Card>
       ) : !tray ? (
-        <Card><TrayFinder onFound={found} /></Card>
+        <>
+          <Card><TrayFinder onFound={found} /></Card>
+          {mode === 'work' && (
+            <Link to="/o/enter" className="text-center text-sm font-semibold text-forest-700 underline">No label, or many trays at once? Record work instead</Link>
+          )}
+        </>
       ) : (
         <Card>
           <div className="flex flex-wrap items-center gap-2">
@@ -89,7 +94,7 @@ export default function Scan({ mode = 'work' }: { mode?: 'work' | 'loss' }) {
             <div><dt className="text-xs text-ink-muted">Bottles</dt><dd className="font-semibold">{tray.bottleCount}</dd></div>
           </dl>
           {line ? (
-            <p className="mt-3 rounded-lg bg-forest-50 px-3 py-2 text-sm text-forest-700">Part of today’s work: {line.handled} of {line.targetBottles} bottles done.</p>
+            <p className="mt-3 rounded-lg bg-forest-50 px-3 py-2 text-sm text-forest-700">Part of today’s work: {line.handled} of {line.target} bottles done.</p>
           ) : (
             mode === 'work' && <p className="mt-3 rounded-lg bg-amberx-100 px-3 py-2 text-sm text-amberx-700">This tray is not in the work given to you today. You can still enter it; your supervisor will see that.</p>
           )}

@@ -1,6 +1,6 @@
 // Sidebar menu for each role. "phase" says when the page gets built (see the frontend plan).
 import {
-  AlertTriangle, BarChart3, Boxes, Bug, ClipboardCheck, ClipboardList, FileText, FlaskConical,
+  AlertTriangle, BarChart3, Boxes, Bug, ClipboardCheck, ClipboardList, ClipboardPen, FileText, FlaskConical,
   Gauge, History, Home, IndianRupee, LayoutDashboard, LayoutGrid, PackageCheck, QrCode, ScanLine, Settings2,
   ShoppingCart, Sprout, Thermometer, TrendingUp, UserCheck, Users, Warehouse, type LucideIcon,
 } from 'lucide-react';
@@ -23,6 +23,7 @@ export const NAV: Record<Role, NavSection[]> = {
       { label: 'Trays and QR', path: '/m/trays', icon: QrCode, phase: 3 },
       { label: 'Contamination', path: '/m/contamination', icon: Bug, phase: 3 },
       { label: 'Daily work', path: '/m/daily', icon: ClipboardList, phase: 4 },
+      { label: 'Work output', path: '/m/output', icon: BarChart3, phase: 8 },
     ] },
     { title: 'Stock, orders, costs', items: [
       { label: 'Stock and media', path: '/m/stock', icon: Warehouse, phase: 5 },
@@ -48,6 +49,7 @@ export const NAV: Record<Role, NavSection[]> = {
       { label: 'Attendance', path: '/s/attendance', icon: UserCheck, phase: 4 },
       { label: 'Assign work', path: '/s/assign', icon: ClipboardList, phase: 4 },
       { label: 'Verify entries', path: '/s/verify', icon: ClipboardCheck, phase: 4 },
+      { label: 'Work output', path: '/s/output', icon: BarChart3, phase: 8 },
     ] },
     { title: 'Zones', zonesBase: '/s/zones', items: [
       { label: 'All my zones', path: '/s/zones', icon: LayoutGrid, phase: 8 },
@@ -68,8 +70,9 @@ export const NAV: Record<Role, NavSection[]> = {
     { title: 'My work', items: [
       { label: 'Today', path: '/o', icon: Home, phase: 4 },
       { label: 'Scan tray', path: '/o/scan', icon: ScanLine, phase: 4 },
+      { label: 'Record work', path: '/o/enter', icon: ClipboardPen, phase: 8 },
+      { label: 'My work', path: '/o/output', icon: BarChart3, phase: 4 },
       { label: 'Report loss', path: '/o/loss', icon: Bug, phase: 4 },
-      { label: 'My output', path: '/o/output', icon: BarChart3, phase: 4 },
       { label: 'Attendance', path: '/o/attendance', icon: PackageCheck, phase: 4 },
       { label: 'Alerts', path: '/o/alerts', icon: AlertTriangle, phase: 6 },
     ] },

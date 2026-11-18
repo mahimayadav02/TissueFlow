@@ -22,7 +22,8 @@ import Attendance from './pages/daily/Attendance';
 import DailyWork from './pages/daily/DailyWork';
 import VerifyEntries from './pages/daily/VerifyEntries';
 import MyAttendance from './pages/operator/MyAttendance';
-import MyOutput from './pages/operator/MyOutput';
+import EnterWork from './pages/operator/EnterWork';
+import WorkOutput from './pages/daily/WorkOutput';
 import Scan from './pages/operator/Scan';
 import MonthlyCosts from './pages/costs/MonthlyCosts';
 import Orders from './pages/orders/Orders';
@@ -69,7 +70,11 @@ const BUILT: Record<string, ReactElement> = {
   '/s/verify': <VerifyEntries />,
   '/o/scan': <Scan />,
   '/o/loss': <Scan mode="loss" key="loss" />,
-  '/o/output': <MyOutput />,
+  '/o/output': <WorkOutput mine key="mine" />,
+  '/o/enter': <EnterWork />,
+  // Work output: day totals of all work, filtered by operator, zone, work, batch and stage
+  '/m/output': <WorkOutput />,
+  '/s/output': <WorkOutput />,
   '/o/attendance': <MyAttendance />,
   // Phase 5: stock and media, orders, monthly costs
   '/m/stock': <StockMedia />,

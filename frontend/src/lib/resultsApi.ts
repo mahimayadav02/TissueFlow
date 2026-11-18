@@ -6,6 +6,8 @@ import { latestReading, readings } from './iot';
 import { visibleAreas } from './productionApi';
 import { db, save } from './store';
 import type { Alert, AttStatus, AuditEntry, LossCause, SensorDevice, SensorReading, Severity, User } from './types';
+import { assignArea, entryArea, entryBatch, entryStage, kindOf, targetOf, workZones } from './work';
+import { workLabel } from './dailyApi';
 
 const nameOf = (id: number | null | undefined) => db.users.find((u) => u.userId === id)?.fullName ?? '—';
 const areaName = (id: number | null) => db.areas.find((a) => a.areaId === id)?.name ?? 'Whole lab';
@@ -18,7 +20,7 @@ const monthOf = (iso: string) => iso.slice(0, 7);
 function canSeeAlert(user: User, a: Alert) {
   if (user.role === 'MANAGER') return true;
   if (user.role === 'SUPERVISOR') return a.areaId !== null && user.zoneIds.includes(a.areaId);
-  return a.areaId !== null && a.areaId === user.homeAreaId && (!a.userId || a.userId === user.userId);
+  return a.areaId !== null && workZones(user).includes(a.areaId) && (!a.userId || a.userId === user.userId);
 }
 
 // ---------- shapes returned to pages ----------
@@ -187,7 +189,7 @@ export const resultsApi = {
     const daily: Dashboard['daily'] = [];
     for (let i = 29; i >= 0; i--) {
       const d = addDays(t, -i);
-      const target = db.assignments.filter((a) => a.workDate === d).reduce((n, a) => n + a.targetBottles, 0);
+      const target = db.assignments.filter((a) => a.workDate === d).reduce((n, a) => n + targetOf(a), 0);
       const handled = e30.filter((e) => e.workDate === d).reduce((n, e) => n + e.bottlesHandled, 0);
       if (target || handled) daily.push({ date: d, handled, target });
     }
@@ -202,14 +204,15 @@ export const resultsApi = {
       runningBatches: fc.length,
       liveBottles: fc.reduce((n, f) => n + f.liveBottles, 0),
       today: {
-        target: db.assignments.filter((a) => a.workDate === t).reduce((n, a) => n + a.targetBottles, 0),
+        target: db.assignments.filter((a) => a.workDate === t).reduce((n, a) => n + targetOf(a), 0),
         handled: todays.reduce((n, e) => n + e.bottlesHandled, 0),
         present: db.attendance.filter((a) => a.workDate === t && a.status !== 'A').length,
         operators: ops.length,
       },
+      // Loss is a culture figure: only sub-culture work counts here.
       loss30: {
-        handled: e30.reduce((n, e) => n + e.bottlesHandled, 0),
-        lost: e30.reduce((n, e) => n + e.bottlesLost, 0),
+        handled: e30.filter((e) => kindOf(e) === 'SUBCULTURE').reduce((n, e) => n + e.bottlesHandled, 0),
+        lost: e30.filter((e) => kindOf(e) === 'SUBCULTURE').reduce((n, e) => n + e.bottlesLost, 0),
         byCause: [...causeTotals.entries()].map(([cause, bottles]) => ({ cause, bottles })).sort((a, b) => b.bottles - a.bottles),
       },
       daily,
@@ -255,27 +258,29 @@ export const resultsApi = {
     staffOnly(user);
     const areas = visibleAreas(user);
     const inScope = (areaId: number | null) => areas === null || (areaId !== null && areas.includes(areaId));
-    const ops = db.users.filter((u) => u.role === 'OPERATOR' && inScope(u.homeAreaId));
+    const ops = db.users.filter((u) => u.role === 'OPERATOR' && workZones(u).some(inScope));
     const opIds = new Set(ops.map((o) => o.userId));
-    const asg = db.assignments.filter((a) => monthOf(a.workDate) === month && opIds.has(a.operatorId));
-    const ent = db.entries.filter((e) => monthOf(e.workDate) === month && opIds.has(e.operatorId) && live(e));
+    const asg = db.assignments.filter((a) => monthOf(a.workDate) === month && opIds.has(a.operatorId) && inScope(assignArea(a)));
+    const ent = db.entries.filter((e) => monthOf(e.workDate) === month && opIds.has(e.operatorId) && live(e) && inScope(entryArea(e)));
     const att = db.attendance.filter((a) => monthOf(a.workDate) === month && opIds.has(a.userId));
     const pct = (d: number, t: number) => (t ? Math.round((100 * d) / t) : null);
 
     const operators = ops.map((o) => {
-      const target = asg.filter((a) => a.operatorId === o.userId).reduce((n, a) => n + a.targetBottles, 0);
+      const target = asg.filter((a) => a.operatorId === o.userId).reduce((n, a) => n + targetOf(a), 0);
       const es = ent.filter((e) => e.operatorId === o.userId);
       const handled = es.reduce((n, e) => n + e.bottlesHandled, 0);
       const count = (s: AttStatus) => att.filter((a) => a.userId === o.userId && a.status === s).length;
-      return { name: o.fullName, areaName: areaName(o.homeAreaId), P: count('P'), HD: count('HD'), A: count('A'), target, handled, pct: pct(handled, target), lost: es.reduce((n, e) => n + e.bottlesLost, 0) };
+      return { name: o.fullName, areaName: workZones(o).filter(inScope).map(areaName).join(', '), P: count('P'), HD: count('HD'), A: count('A'), target, handled, pct: pct(handled, target), lost: es.reduce((n, e) => n + (kindOf(e) === 'SUBCULTURE' ? e.bottlesLost : 0), 0) };
     }).filter((o) => o.P + o.HD + o.A + o.target + o.handled > 0);
-    const zoneNames = [...new Set(operators.map((o) => o.areaName))];
-    const zones = zoneNames.map((z) => {
-      const os = operators.filter((o) => o.areaName === z);
-      const target = os.reduce((n, o) => n + o.target, 0);
-      const handled = os.reduce((n, o) => n + o.handled, 0);
-      return { areaName: z, operators: os.length, target, handled, pct: pct(handled, target), lost: os.reduce((n, o) => n + o.lost, 0) };
-    });
+    // Zone totals come from where the work was done, so an operator in two zones counts in both.
+    const zoneIds = [...new Set([...asg.map(assignArea), ...ent.map(entryArea)].filter((z): z is number => z !== null))];
+    const zones = zoneIds.map((z) => {
+      const za = asg.filter((a) => assignArea(a) === z);
+      const ze = ent.filter((e) => entryArea(e) === z);
+      const target = za.reduce((n, a) => n + targetOf(a), 0);
+      const handled = ze.reduce((n, e) => n + e.bottlesHandled, 0);
+      return { areaName: areaName(z), operators: new Set([...za.map((a) => a.operatorId), ...ze.map((e) => e.operatorId)]).size, target, handled, pct: pct(handled, target), lost: ze.reduce((n, e) => n + (kindOf(e) === 'SUBCULTURE' ? e.bottlesLost : 0), 0) };
+    }).sort((a, b) => a.areaName.localeCompare(b.areaName));
 
     const trayArea = (trayId: number) => {
       const t = db.trays.find((x) => x.trayId === trayId);
@@ -337,22 +342,22 @@ export const resultsApi = {
     need(date <= today(), 'Choose today or an earlier day.');
     const areas = visibleAreas(user);
     const inScope = (areaId: number | null) => areas === null || (areaId !== null && areas.includes(areaId));
-    const ops = db.users.filter((u) => u.role === 'OPERATOR' && inScope(u.homeAreaId));
+    const ops = db.users.filter((u) => u.role === 'OPERATOR' && workZones(u).some(inScope));
     const opIds = new Set(ops.map((o) => o.userId));
-    const ent = db.entries.filter((e) => e.workDate === date && opIds.has(e.operatorId));
+    const ent = db.entries.filter((e) => e.workDate === date && opIds.has(e.operatorId) && inScope(entryArea(e)));
     const code = (stageId: number) => db.stages.find((x) => x.stageId === stageId)?.code ?? '—';
     const bcode = (batchId: number) => db.batches.find((b) => b.batchId === batchId)?.batchCode ?? '—';
     const operators = ops.map((o) => {
-      const as = db.assignments.filter((a) => a.workDate === date && a.operatorId === o.userId);
+      const as = db.assignments.filter((a) => a.workDate === date && a.operatorId === o.userId && inScope(assignArea(a)));
       const es = ent.filter((e) => e.operatorId === o.userId);
       const ok = es.filter(live);
-      const target = as.reduce((n, a) => n + a.targetBottles, 0);
+      const target = as.reduce((n, a) => n + targetOf(a), 0);
       const handled = ok.reduce((n, e) => n + e.bottlesHandled, 0);
       return {
-        name: o.fullName, areaName: areaName(o.homeAreaId),
+        name: o.fullName, areaName: workZones(o).filter(inScope).map(areaName).join(', '),
         attendance: db.attendance.find((a) => a.userId === o.userId && a.workDate === date)?.status ?? null,
-        work: as.map((a) => `${bcode(a.batchId)} ${code(a.stageId)}`).join(', '),
-        target, handled, produced: ok.reduce((n, e) => n + e.bottlesProduced, 0), lost: ok.reduce((n, e) => n + e.bottlesLost, 0),
+        work: as.map((a) => workLabel(a)).join(', '),
+        target, handled, produced: ok.reduce((n, e) => n + e.bottlesProduced, 0), lost: ok.reduce((n, e) => n + (kindOf(e) === 'SUBCULTURE' ? e.bottlesLost : 0), 0),
         pct: target ? Math.round((100 * handled) / target) : null,
         pending: es.filter((e) => e.status === 'PENDING').length,
         verified: es.filter((e) => e.status === 'VERIFIED').length,
@@ -361,10 +366,11 @@ export const resultsApi = {
     });
     const groups = new Map<string, { batchCode: string; stage: string; handled: number; produced: number; lost: number }>();
     for (const e of ent.filter(live)) {
-      const t = db.trays.find((x) => x.trayId === e.trayId);
-      if (!t) continue;
-      const k = `${t.batchId}:${t.stageId}`;
-      const g = groups.get(k) ?? { batchCode: bcode(t.batchId), stage: code(t.stageId), handled: 0, produced: 0, lost: 0 };
+      const b = entryBatch(e);
+      const st = entryStage(e);
+      if (kindOf(e) !== 'SUBCULTURE' || b === null || st === null) continue;
+      const k = `${b}:${st}`;
+      const g = groups.get(k) ?? { batchCode: bcode(b), stage: code(st), handled: 0, produced: 0, lost: 0 };
       g.handled += e.bottlesHandled;
       g.produced += e.bottlesProduced;
       g.lost += e.bottlesLost;

@@ -4,8 +4,8 @@ import { SEED } from './mockData';
 
 export type DB = typeof SEED;
 
-const KEY = 'tissueflow.db.v4';
-// v4 (Phase 6): sample data now includes the sensor node, alert checks and audit log. Older saved data is ignored.
+const KEY = 'tissueflow.db.v5';
+// v5: work types (washing, media, quality check), typed-in entries and operators in two zones. Older saved data is ignored.
 
 function load(): DB {
   try {
