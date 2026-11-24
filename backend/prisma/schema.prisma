@@ -1,0 +1,717 @@
+// Database schema of the IoT Enabled Automated Tissue Management System.
+// Follows the ER design of the report (Section 4.11) plus what was added while building the frontend:
+// work types per zone, washing and media counts, typed-in entries and operators who work in two zones.
+// Field names match the frontend's types (areaId, batchId …) so its rules can move to the server unchanged.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------- lists of fixed values
+
+enum Role {
+  MANAGER
+  SUPERVISOR
+  OPERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  LEFT
+}
+
+enum AreaType {
+  WASH
+  MEDIA
+  INOCULATION
+  INCUBATION
+  QC
+  HARDENING
+  STORE
+}
+
+enum Phase {
+  INITIATION
+  MULTIPLICATION
+  ROOTING
+  HARDENING
+}
+
+enum BatchStatus {
+  RUNNING
+  CLOSED
+}
+
+enum TrayStatus {
+  ACTIVE
+  MOVED
+  LOST
+  SENT
+}
+
+enum LossCause {
+  LAB
+  OPERATOR
+  SEASON
+  MEDIA
+}
+
+enum LossType {
+  FUNGAL
+  BACTERIAL
+  OTHER
+}
+
+enum AttStatus {
+  P
+  HD
+  A
+}
+
+enum WorkKind {
+  SUBCULTURE
+  WASH
+  MEDIA
+  QC_MEDIA
+  QC_CULTURE
+}
+
+enum EntrySource {
+  QR
+  MANUAL
+}
+
+enum EntryStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ItemCategory {
+  CHEMICAL
+  CONSUMABLE
+  HARDENING
+  OTHER
+}
+
+enum TxnType {
+  IN
+  OUT
+  ADJ
+}
+
+enum CostHeading {
+  LABOUR
+  CHEMICALS
+  CONSUMABLES
+  POWER
+  HARDENING
+  OTHER
+}
+
+enum Decision {
+  YES
+  PARTLY
+  NO
+}
+
+enum OrderStatus {
+  OPEN
+  DELIVERED
+  CANCELLED
+}
+
+enum Severity {
+  WARNING
+  CRITICAL
+}
+
+enum Direction {
+  ABOVE
+  BELOW
+}
+
+// ---------------------------------------------------------------- laboratory structure
+
+model Lab {
+  labId   Int    @id @default(autoincrement())
+  name    String
+  address String
+  phone   String
+  areas   Area[]
+
+  @@map("lab")
+}
+
+/// A zone of the lab (washing, media preparation, inoculation, growth room …).
+model Area {
+  areaId   Int      @id @default(autoincrement())
+  labId    Int
+  name     String
+  areaType AreaType
+  roomNo   String
+
+  lab         Lab               @relation(fields: [labId], references: [labId])
+  benches     Bench[]
+  homeUsers   User[]            @relation("HomeArea")
+  zoneLinks   UserZone[]
+  assignments WorkAssignment[]
+  entries     ProductionEntry[]
+  devices     SensorDevice[]
+  alerts      Alert[]
+
+  @@unique([labId, name])
+  @@map("area")
+}
+
+/// A bench, rack or laminar-flow hood inside a zone.
+model Bench {
+  benchId       Int    @id @default(autoincrement())
+  areaId        Int
+  code          String
+  capacityTrays Int
+
+  area        Area             @relation(fields: [areaId], references: [areaId])
+  trays       Tray[]
+  assignments WorkAssignment[]
+
+  @@unique([areaId, code])
+  @@map("bench")
+}
+
+// ---------------------------------------------------------------- people and login
+
+model User {
+  userId       Int        @id @default(autoincrement())
+  fullName     String
+  role         Role
+  phone        String     @unique
+  email        String?    @unique
+  passwordHash String
+  homeAreaId   Int?
+  status       UserStatus @default(ACTIVE)
+  /// Raised by "sign out of all devices": tokens carrying an older number stop working.
+  tokenVersion Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  homeArea         Area?             @relation("HomeArea", fields: [homeAreaId], references: [areaId])
+  zones            UserZone[]
+  sessions         AuthSession[]
+  passwordResets   PasswordReset[]
+  attendance       Attendance[]      @relation("AttendanceUser")
+  attendanceMarked Attendance[]      @relation("AttendanceMarkedBy")
+  assignments      WorkAssignment[]  @relation("AssignOperator")
+  assignmentsGiven WorkAssignment[]  @relation("AssignedBy")
+  entries          ProductionEntry[] @relation("EntryOperator")
+  entriesEntered   ProductionEntry[] @relation("EntryEnteredBy")
+  entriesVerified  ProductionEntry[] @relation("EntryVerifiedBy")
+  movements        TrayMovement[]    @relation("MovedBy")
+  contaminations   Contamination[]   @relation("ReportedBy")
+  stockTxns        StockTxn[]        @relation("StockDoneBy")
+  mediaLots        MediaLot[]        @relation("LotPreparedBy")
+  costs            CostEntry[]       @relation("CostEnteredBy")
+  orders           SalesOrder[]      @relation("OrderCreatedBy")
+  deliveries       Delivery[]        @relation("DeliveryEnteredBy")
+  alertsAcked      Alert[]           @relation("AlertAckBy")
+  alerts           Alert[]           @relation("AlertUser")
+  audit            AuditLog[]        @relation("AuditUser")
+
+  @@map("app_user")
+}
+
+/// Supervisor: the zones they look after. Operator: other zones they also work in, besides the home zone.
+model UserZone {
+  userId Int
+  areaId Int
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [areaId], onDelete: Cascade)
+
+  @@id([userId, areaId])
+  @@map("user_zone")
+}
+
+/// A signed-in device. Only a hash of its refresh token is stored.
+model AuthSession {
+  sessionId String    @id @default(uuid())
+  userId    Int
+  tokenHash String    @unique
+  userAgent String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_session")
+}
+
+/// A forgot-password request. Only a hash of the emailed token is stored; it can be used once.
+model PasswordReset {
+  resetId   Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("password_reset")
+}
+
+// ---------------------------------------------------------------- set-up lists
+
+model Crop {
+  cropId        Int    @id @default(autoincrement())
+  name          String
+  variety       String
+  /// New bottles per bottle in one multiplication round, until the batch has its own records.
+  defaultGrowth Float
+
+  batches Batch[]
+  orders  SalesOrder[]
+
+  @@unique([name, variety])
+  @@map("crop")
+}
+
+model Stage {
+  stageId Int    @id @default(autoincrement())
+  code    String @unique
+  phase   Phase
+  seqNo   Int
+  minDays Int
+  maxDays Int
+
+  trays         Tray[]
+  assignments   WorkAssignment[]
+  entries       ProductionEntry[]
+  movementsFrom TrayMovement[]    @relation("FromStage")
+  movementsTo   TrayMovement[]    @relation("ToStage")
+
+  @@map("stage")
+}
+
+/// A media code such as MU-01 (multiplication) or RO-01 (rooting).
+model MediaRecipe {
+  recipeId      Int    @id @default(autoincrement())
+  code          String @unique
+  phase         Phase
+  shelfLifeDays Int
+  notes         String @default("")
+
+  lots        MediaLot[]
+  assignments WorkAssignment[]
+
+  @@map("media_recipe")
+}
+
+model AlertRule {
+  ruleId        Int       @id @default(autoincrement())
+  code          String    @unique
+  label         String
+  unit          String
+  direction     Direction
+  warnValue     Float
+  criticalValue Float?
+  notifyRole    Role
+
+  @@map("alert_rule")
+}
+
+/// One row only (settingsId 1): the manager's forecast settings.
+model Settings {
+  settingsId              Int    @id @default(1)
+  rootingSurvival         Float
+  hardeningSurvival       Float
+  lastMultiplicationStage String
+  defaultRate             Float?
+
+  @@map("settings")
+}
+
+// ---------------------------------------------------------------- production
+
+model Batch {
+  batchId       Int         @id @default(autoincrement())
+  batchCode     String      @unique
+  cropId        Int
+  parentBatchId Int?
+  startDate     DateTime    @db.Date
+  status        BatchStatus @default(RUNNING)
+
+  crop        Crop              @relation(fields: [cropId], references: [cropId])
+  parent      Batch?            @relation("BatchSplit", fields: [parentBatchId], references: [batchId])
+  children    Batch[]           @relation("BatchSplit")
+  samples     Sample[]
+  trays       Tray[]
+  movements   TrayMovement[]
+  assignments WorkAssignment[]
+  entries     ProductionEntry[]
+  deliveries  Delivery[]
+
+  @@map("batch")
+}
+
+model Sample {
+  sampleId    Int      @id @default(autoincrement())
+  batchId     Int
+  sampleType  String
+  noOfSamples Int
+  sampleSize  Int
+  sourceFarm  String
+  collectedAt DateTime
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@map("sample")
+}
+
+/// A tray of up to 30 bottles of one batch at one stage, with its own QR code.
+model Tray {
+  trayId       Int        @id @default(autoincrement())
+  qrCode       String     @unique
+  batchId      Int
+  stageId      Int
+  benchId      Int
+  mediaLotId   Int?
+  bottleCount  Int
+  startBottles Int?
+  /// Date the tray entered this stage.
+  placedOn     DateTime   @db.Date
+  status       TrayStatus @default(ACTIVE)
+  /// Raised on every change, so two people cannot change the same tray at once without noticing.
+  version      Int        @default(0)
+
+  batch          Batch             @relation(fields: [batchId], references: [batchId])
+  stage          Stage             @relation(fields: [stageId], references: [stageId])
+  bench          Bench             @relation(fields: [benchId], references: [benchId])
+  mediaLot       MediaLot?         @relation(fields: [mediaLotId], references: [mediaLotId])
+  contaminations Contamination[]
+  movements      TrayMovement[]    @relation("MovementTray")
+  entries        ProductionEntry[]
+
+  @@index([batchId, stageId, status])
+  @@index([benchId, status])
+  @@map("tray")
+}
+
+/// A sub-culture or bench move. Older stage history has no tray or bench (null).
+model TrayMovement {
+  movementId   Int      @id @default(autoincrement())
+  batchId      Int
+  trayId       Int?
+  newTrayIds   Int[]
+  takenTrayIds Int[]
+  fromStageId  Int
+  toStageId    Int
+  fromBenchId  Int?
+  toBenchId    Int?
+  bottlesIn    Int
+  bottlesOut   Int
+  bottlesLost  Int
+  movedBy      Int
+  movedAt      DateTime @default(now())
+
+  batch     Batch             @relation(fields: [batchId], references: [batchId])
+  tray      Tray?             @relation("MovementTray", fields: [trayId], references: [trayId])
+  fromStage Stage             @relation("FromStage", fields: [fromStageId], references: [stageId])
+  toStage   Stage             @relation("ToStage", fields: [toStageId], references: [stageId])
+  mover     User              @relation("MovedBy", fields: [movedBy], references: [userId])
+  entries   ProductionEntry[]
+
+  @@index([batchId, movedAt])
+  @@map("tray_movement")
+}
+
+model Contamination {
+  contId      Int       @id @default(autoincrement())
+  trayId      Int
+  bottlesLost Int
+  cause       LossCause
+  contType    LossType
+  foundOn     DateTime  @db.Date
+  reportedBy  Int
+  note        String    @default("")
+
+  tray     Tray              @relation(fields: [trayId], references: [trayId])
+  reporter User              @relation("ReportedBy", fields: [reportedBy], references: [userId])
+  entries  ProductionEntry[]
+
+  @@index([foundOn])
+  @@map("contamination")
+}
+
+// ---------------------------------------------------------------- daily work
+
+model Attendance {
+  attId    Int       @id @default(autoincrement())
+  userId   Int
+  workDate DateTime  @db.Date
+  status   AttStatus
+  markedBy Int
+
+  user   User @relation("AttendanceUser", fields: [userId], references: [userId])
+  marker User @relation("AttendanceMarkedBy", fields: [markedBy], references: [userId])
+
+  @@unique([userId, workDate])
+  @@map("attendance")
+}
+
+/// Work given to an operator for one day, in one zone, with a target in bottles.
+model WorkAssignment {
+  assignId           Int      @id @default(autoincrement())
+  workDate           DateTime @db.Date
+  operatorId         Int
+  kind               WorkKind @default(SUBCULTURE)
+  areaId             Int?
+  batchId            Int?
+  stageId            Int?
+  benchId            Int?
+  targetBottles      Int
+  /// Washing only: contaminated bottles to wash, on top of targetBottles.
+  targetContaminated Int      @default(0)
+  /// Media making only: the media code and the batch code of the new media.
+  recipeId           Int?
+  mediaBatchCode     String?
+  assignedBy         Int
+
+  operator User              @relation("AssignOperator", fields: [operatorId], references: [userId])
+  assigner User              @relation("AssignedBy", fields: [assignedBy], references: [userId])
+  area     Area?             @relation(fields: [areaId], references: [areaId])
+  batch    Batch?            @relation(fields: [batchId], references: [batchId])
+  stage    Stage?            @relation(fields: [stageId], references: [stageId])
+  bench    Bench?            @relation(fields: [benchId], references: [benchId])
+  recipe   MediaRecipe?      @relation(fields: [recipeId], references: [recipeId])
+  entries  ProductionEntry[]
+
+  @@index([workDate, operatorId])
+  @@map("work_assignment")
+}
+
+/// One piece of work done: a scanned tray, or counts typed in. Supervisors check every entry.
+model ProductionEntry {
+  entryId         Int         @id @default(autoincrement())
+  assignId        Int?
+  operatorId      Int
+  kind            WorkKind    @default(SUBCULTURE)
+  source          EntrySource @default(QR)
+  trayId          Int?
+  batchId         Int?
+  stageId         Int?
+  areaId          Int?
+  /// Typed-in sub-culture: bottles taken from each tray, e.g. [{"trayId":4,"bottles":30}].
+  taken           Json?
+  /// Washing: of the bottles washed, how many were contaminated ones.
+  contaminated    Int         @default(0)
+  mediaLotId      Int?
+  enteredBy       Int?
+  movementId      Int?
+  contId          Int?
+  workDate        DateTime    @db.Date
+  bottlesHandled  Int
+  bottlesProduced Int
+  bottlesLost     Int
+  status          EntryStatus @default(PENDING)
+  enteredAt       DateTime    @default(now())
+  verifiedBy      Int?
+  verifiedAt      DateTime?
+  note            String      @default("")
+
+  assignment    WorkAssignment? @relation(fields: [assignId], references: [assignId])
+  operator      User            @relation("EntryOperator", fields: [operatorId], references: [userId])
+  enteredByUser User?           @relation("EntryEnteredBy", fields: [enteredBy], references: [userId])
+  verifier      User?           @relation("EntryVerifiedBy", fields: [verifiedBy], references: [userId])
+  tray          Tray?           @relation(fields: [trayId], references: [trayId])
+  batch         Batch?          @relation(fields: [batchId], references: [batchId])
+  stage         Stage?          @relation(fields: [stageId], references: [stageId])
+  area          Area?           @relation(fields: [areaId], references: [areaId])
+  mediaLot      MediaLot?       @relation(fields: [mediaLotId], references: [mediaLotId])
+  movement      TrayMovement?   @relation(fields: [movementId], references: [movementId])
+  contamination Contamination?  @relation(fields: [contId], references: [contId])
+
+  @@index([workDate])
+  @@index([operatorId, workDate])
+  @@index([status])
+  @@map("production_entry")
+}
+
+// ---------------------------------------------------------------- stock and media
+
+model Item {
+  itemId       Int          @id @default(autoincrement())
+  name         String       @unique
+  category     ItemCategory
+  unit         String
+  stockQty     Float
+  reorderLevel Float
+
+  txns StockTxn[]
+
+  @@map("item")
+}
+
+model StockTxn {
+  txnId      Int      @id @default(autoincrement())
+  itemId     Int
+  txnType    TxnType
+  qty        Float
+  mediaLotId Int?
+  txnDate    DateTime @db.Date
+  doneBy     Int
+  note       String   @default("")
+
+  item     Item      @relation(fields: [itemId], references: [itemId])
+  mediaLot MediaLot? @relation(fields: [mediaLotId], references: [mediaLotId])
+  doer     User      @relation("StockDoneBy", fields: [doneBy], references: [userId])
+
+  @@index([itemId, txnDate])
+  @@map("stock_txn")
+}
+
+/// A batch of media made from one recipe, with its batch code (e.g. B0001/26).
+model MediaLot {
+  mediaLotId    Int      @id @default(autoincrement())
+  lotCode       String   @unique
+  recipeId      Int
+  preparedOn    DateTime @db.Date
+  volumeLitre   Float
+  bottlesFilled Int
+  expiresOn     DateTime @db.Date
+  preparedBy    Int
+
+  recipe   MediaRecipe       @relation(fields: [recipeId], references: [recipeId])
+  preparer User              @relation("LotPreparedBy", fields: [preparedBy], references: [userId])
+  trays    Tray[]
+  txns     StockTxn[]
+  entries  ProductionEntry[]
+
+  @@map("media_lot")
+}
+
+// ---------------------------------------------------------------- money and orders
+
+model CostEntry {
+  costId    Int         @id @default(autoincrement())
+  /// YYYY-MM
+  month     String
+  heading   CostHeading
+  amount    Decimal     @db.Decimal(12, 2)
+  enteredBy Int
+
+  enterer User @relation("CostEnteredBy", fields: [enteredBy], references: [userId])
+
+  @@unique([month, heading])
+  @@map("cost_entry")
+}
+
+model SalesOrder {
+  orderId        Int         @id @default(autoincrement())
+  orderCode      String      @unique
+  customerName   String
+  phone          String
+  cropId         Int
+  plantsOrdered  Int
+  ratePerPlant   Decimal     @db.Decimal(10, 2)
+  requiredBy     DateTime    @db.Date
+  decision       Decision
+  plantsPromised Int
+  status         OrderStatus @default(OPEN)
+  createdAt      DateTime    @default(now())
+  createdBy      Int
+
+  crop       Crop       @relation(fields: [cropId], references: [cropId])
+  creator    User       @relation("OrderCreatedBy", fields: [createdBy], references: [userId])
+  deliveries Delivery[]
+
+  @@map("sales_order")
+}
+
+model Delivery {
+  deliveryId Int      @id @default(autoincrement())
+  orderId    Int
+  batchId    Int
+  plantsSent Int
+  sentOn     DateTime @db.Date
+  enteredBy  Int
+
+  order   SalesOrder @relation(fields: [orderId], references: [orderId])
+  batch   Batch      @relation(fields: [batchId], references: [batchId])
+  enterer User       @relation("DeliveryEnteredBy", fields: [enteredBy], references: [userId])
+
+  @@map("delivery")
+}
+
+// ---------------------------------------------------------------- monitoring, alerts and audit
+
+model SensorDevice {
+  deviceId    Int     @id @default(autoincrement())
+  name        String
+  areaId      Int
+  intervalMin Int
+  /// Hash of the device key the sensor node sends with its readings.
+  apiKeyHash  String?
+
+  area     Area            @relation(fields: [areaId], references: [areaId])
+  readings SensorReading[]
+
+  @@map("sensor_device")
+}
+
+model SensorReading {
+  readingId   BigInt   @id @default(autoincrement())
+  deviceId    Int
+  recordedAt  DateTime
+  tempC       Float
+  humidityPct Float
+  lightLux    Float?
+
+  device SensorDevice @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+
+  @@index([deviceId, recordedAt])
+  @@map("sensor_reading")
+}
+
+model Alert {
+  alertId   Int       @id @default(autoincrement())
+  code      String
+  areaId    Int?
+  severity  Severity
+  message   String
+  createdAt DateTime  @default(now())
+  ackAt     DateTime?
+  ackBy     Int?
+  /// Stops the same alert being raised twice (e.g. "ROOM_TEMP_HIGH:2026-11-23").
+  key       String?   @unique
+  /// For alerts about one person (e.g. operator below target).
+  userId    Int?
+
+  area  Area? @relation(fields: [areaId], references: [areaId])
+  acker User? @relation("AlertAckBy", fields: [ackBy], references: [userId])
+  user  User? @relation("AlertUser", fields: [userId], references: [userId])
+
+  @@index([createdAt])
+  @@map("alert")
+}
+
+/// Every change made in the app: who, when and what.
+model AuditLog {
+  auditId Int      @id @default(autoincrement())
+  at      DateTime @default(now())
+  userId  Int?
+  action  String
+  detail  String
+
+  user User? @relation("AuditUser", fields: [userId], references: [userId])
+
+  @@index([at])
+  @@map("audit_log")
+}
