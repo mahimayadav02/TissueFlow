@@ -1,0 +1,88 @@
+# Runs on every push and pull request: checks the backend and the website, and runs every API test
+# against a fresh database made just for this run (never the real Neon database).
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dates in the sample data and in the app follow the lab's clock.
+  TZ: Asia/Kolkata
+
+jobs:
+  backend:
+    name: Backend (type check + API tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: tf
+          POSTGRES_PASSWORD: tf
+          POSTGRES_DB: tissueflow_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tf -d tissueflow_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://tf:tf@localhost:5432/tissueflow_test
+      DIRECT_URL: postgresql://tf:tf@localhost:5432/tissueflow_test
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      CORS_ORIGIN: http://localhost:5173
+      NODE_ENV: test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Build (as on Render)
+        run: npm run build
+      - name: Make the test database (migrations + sample lab)
+        run: npx prisma migrate deploy && npm run db:seed
+      - name: All tests
+        run: npm test
+      - name: Security warnings (npm audit, report only)
+        if: always()
+        run: npm audit || true
+
+  website:
+    name: Website (type check + build + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Build (as on Vercel)
+        run: npm run build
+      - name: Tests on the sample data
+        if: hashFiles('frontend/tests/*.test.ts') != ''
+        run: npx --yes tsx --test tests/*.test.ts
+      - name: Security warnings (npm audit, report only)
+        if: always()
+        run: npm audit || true
