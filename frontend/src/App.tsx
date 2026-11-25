@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { RequireRole } from './components/layout/RequireRole';
 import { NAV } from './config/nav';
@@ -40,7 +40,6 @@ import Profile from './pages/account/Profile';
 import About from './pages/public/About';
 import ForgotPassword from './pages/public/ForgotPassword';
 import ResetPassword from './pages/public/ResetPassword';
-import Landing from './pages/public/Landing';
 
 /**
  * Every address in the app.
@@ -116,7 +115,8 @@ export default function App() {
   return (
     <Routes>
       {/* Public pages: anyone can open these */}
-      <Route path="/" element={<Landing />} />
+      {/* The site opens straight on the sign-in page (signed-in people go on to their home page). */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

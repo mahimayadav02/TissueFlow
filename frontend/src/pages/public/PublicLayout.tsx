@@ -3,21 +3,18 @@ import { Link } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
 import { HOME_OF, useAuth } from '../../lib/auth';
 
-/** Header and footer for the pages anyone can open: home, about, sign in help. */
+/** Header and footer for the pages anyone can open: about, forgot and reset password. */
 export function PublicLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   return (
     <div className="min-h-full bg-paper">
       <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-          <Link to="/" className="focus-ring flex items-center gap-2 rounded-lg">
+          <Link to="/login" className="focus-ring flex items-center gap-2 rounded-lg">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-forest"><Sprout size={18} className="text-[#9FD3B8]" /></span>
             <span className="font-display text-lg font-semibold tracking-tight text-forest">TissueFlow</span>
           </Link>
           <nav aria-label="Site" className="hidden flex-1 items-center gap-5 text-sm text-ink-muted md:flex">
-            <a href="/#how" className="hover:text-ink">How it works</a>
-            <a href="/#roles" className="hover:text-ink">Who uses it</a>
-            <a href="/#modules" className="hover:text-ink">What it covers</a>
             <Link to="/about" className="hover:text-ink">About the project</Link>
           </nav>
           <div className="ml-auto md:ml-0">
