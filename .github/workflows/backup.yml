@@ -1,0 +1,73 @@
+# Nightly backup of the live database (Neon), encrypted, kept for 30 days in this run's files.
+# The repository is public, so the backup is encrypted with BACKUP_PASSPHRASE before it is stored; without
+# that passphrase the file cannot be opened. Each run also restores its own backup into an empty database,
+# to prove the backup works.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  the Neon DIRECT_URL (the one without "-pooler")
+#   BACKUP_PASSPHRASE    a long random passphrase; keep a copy somewhere safe
+name: Database backup
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 03:00 in India
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      restore:
+        image: postgres:18
+        env:
+          POSTGRES_USER: check
+          POSTGRES_PASSWORD: check
+          POSTGRES_DB: restore_check
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U check -d restore_check"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check the secrets are set
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::error::Add the BACKUP_DATABASE_URL and BACKUP_PASSPHRASE secrets first (see the top of this file)."
+            exit 1
+          fi
+
+      - name: Dump the database
+        run: |
+          STAMP=$(TZ=Asia/Kolkata date +%Y-%m-%d_%H%M)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          docker run --rm --network host -e DB_URL postgres:18 \
+            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-privileges' > tissueflow.dump
+          ls -l tissueflow.dump
+          test -s tissueflow.dump
+
+      - name: Restore it into an empty database to check it
+        run: |
+          docker run --rm --network host -v "$PWD:/b" postgres:18 \
+            pg_restore --no-owner --no-privileges --exit-on-error -d postgresql://check:check@localhost:5432/restore_check /b/tissueflow.dump
+          docker run --rm --network host postgres:18 psql postgresql://check:check@localhost:5432/restore_check -At -c \
+            "select 'users ' || count(*) from app_user union all select 'batches ' || count(*) from batch union all select 'trays ' || count(*) from tray union all select 'work entries ' || count(*) from production_entry"
+
+      - name: Encrypt
+        run: |
+          echo "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "tissueflow_${STAMP}.dump.gpg" tissueflow.dump
+          rm tissueflow.dump
+          ls -l "tissueflow_${STAMP}.dump.gpg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tissueflow-backup-${{ env.STAMP }}
+          path: tissueflow_*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error

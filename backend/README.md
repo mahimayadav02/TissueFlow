@@ -178,3 +178,23 @@ API share one address and the sign-in cookie stays first-party.
 
 On the free plan the server sleeps after 15 minutes without visits; the first visit after that takes up to about a
 minute while it wakes.
+
+## Checks, backups and package updates (GitHub Actions)
+
+- **Checks** (`.github/workflows/ci.yml`) run on every push: backend type check, build and every API test on a
+  fresh database made for the run (never the live one), website type check and build, and an `npm audit` report.
+- **Database backup** (`.github/workflows/backup.yml`) runs every night at 03:00 India time: it dumps the live Neon
+  database, restores the dump into an empty database to prove it works, encrypts it and keeps it for 30 days in the
+  run's files. Needs the repository secrets `BACKUP_DATABASE_URL` (Neon DIRECT_URL) and `BACKUP_PASSPHRASE`.
+- **Update packages** (`.github/workflows/packages.yml`) is started by hand to run an npm command on GitHub.
+
+### Restoring a backup
+
+1. Open the repository's Actions tab → Database backup → a run → download the `tissueflow-backup-…` file and unzip it.
+2. Decrypt it (asks for the passphrase): `gpg -o tissueflow.dump -d tissueflow_<date>.dump.gpg`
+3. In Neon, make a new branch (or database) to restore into, and copy its connection string (without `-pooler`).
+4. Restore: `pg_restore --no-owner --no-privileges -d "<that connection string>" tissueflow.dump`
+5. Check the data, then point `DATABASE_URL` / `DIRECT_URL` (on Render) at it if it should become the live database.
+
+Neon also keeps its own short history of the database, so it can be rewound to a recent moment from the Neon
+console (the length of that history depends on the Neon plan).
