@@ -15,3 +15,24 @@ export const addDays = (iso: string, n: number) => isoDate(new Date(dbDate(iso).
 export const daysBetween = (fromIso: string, untilIso = labToday()) =>
   Math.round((dbDate(untilIso).getTime() - dbDate(fromIso).getTime()) / 86_400_000);
 export const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(dbDate(s).getTime()) && isoDate(dbDate(s)) === s;
+
+const offsetFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, timeZoneName: 'longOffset' });
+/** Minutes the lab's clock is ahead of UTC at a moment (330 in India). */
+export function labOffsetMin(ms: number): number {
+  const name = offsetFmt.formatToParts(new Date(ms)).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+  const m = /GMT([+-])(\d{2}):?(\d{2})?/.exec(name);
+  return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] ?? 0)) : 0;
+}
+/** Hour of the day on the lab's clock, with minutes as a fraction (e.g. 14.5). */
+export const labHour = (ms: number) => {
+  const local = new Date(ms + labOffsetMin(ms) * 60_000);
+  return local.getUTCHours() + local.getUTCMinutes() / 60;
+};
+/** A lab-clock date and time (YYYY-MM-DD, HH:MM) as a moment. */
+export const labTimeMs = (date: string, hhmm: string) => {
+  const guess = Date.parse(`${date}T${hhmm}:00Z`);
+  return guess - labOffsetMin(guess) * 60_000;
+};
+/** The lab-clock time of day of a moment, e.g. "02:15 pm". */
+export const labClock = (iso: string) =>
+  new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: TZ });

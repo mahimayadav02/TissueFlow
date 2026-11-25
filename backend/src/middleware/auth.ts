@@ -7,6 +7,8 @@ import { verifyJwt } from '../lib/jwt.js';
 import { ApiError } from './errors.js';
 
 export const requireAuth: RequestHandler = async (req, _res, next) => {
+  // Already checked for this request (two routers on the same path).
+  if (req.user) return next();
   const header = req.get('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const claims = token ? verifyJwt(token, env.JWT_SECRET) : null;

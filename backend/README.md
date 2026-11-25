@@ -129,3 +129,29 @@ the same bottles at the same moment cannot both succeed.
 
 For now each daily-work request reads the lab's working tables whole. That is quick at the size of one lab;
 when months of records have built up, the reads will be limited to the dates asked for (Phase 7).
+
+## Results: stock, media, costs, orders, forecast, alerts, reports, zones
+
+Same rules as the website (`opsApi.ts`, `resultsApi.ts`, `forecast.ts`, `alertEngine.ts`, `zonesApi.ts`).
+
+| Endpoint | Who | What it does |
+| --- | --- | --- |
+| `GET/POST /api/v1/stock/items`, `PUT /stock/items/:id` | manager, supervisor | Stock items (opening stock is recorded) |
+| `POST /api/v1/stock/moves` | manager, supervisor | `IN` received, `OUT` used, `ADJ` counted stock (needs a reason) |
+| `GET /api/v1/stock/txns?days=` | manager, supervisor | Stock history |
+| `GET/POST /api/v1/media/lots`, `GET /media/usable?phase=` | all / manager, supervisor | Media lots (code like B0001/26; chemicals taken out of stock) |
+| `GET/PUT /api/v1/costs/month?month=`, `GET /costs/history`, `/costs/batches` | manager | Monthly costs, cost per bottle-round, cost per batch |
+| `GET/POST /api/v1/orders`, `POST /orders/check` | manager | Orders; "can we deliver by this date?" from the forecast |
+| `POST /api/v1/orders/:id/recheck`, `/cancel`, `/deliveries`; `GET /orders/hardened-stock?cropId=` | manager | Check again, cancel, record plants sent (taken from hardening trays) |
+| `GET /api/v1/forecast` | manager | Expected plants, ready dates, cost and profit per batch |
+| `GET /api/v1/alerts`, `POST /alerts/acknowledge` | all / manager, supervisor | Alerts in your zones; the checks run when alerts are read (at most once a minute) |
+| `GET /api/v1/dashboard` | manager | Manager's home page figures |
+| `GET /api/v1/room?hours=` | manager, supervisor | Growth room readings, limits and alerts |
+| `GET /api/v1/reports/month?month=`, `/reports/day?date=` | manager, supervisor | Monthly and daily reports (money only for the manager) |
+| `GET /api/v1/audit?days=` | manager | Audit log |
+| `GET /api/v1/zones`, `/zones/:id` | manager, supervisor | All zones, and one zone's page |
+| `GET /api/v1/iot/devices`, `POST /iot/devices/:id/key` | manager | Sensor nodes; make a device key (shown once) |
+| `POST /api/v1/iot/readings` | sensor node (`X-Device-Key` header) | `{tempC, humidityPct, lightLux?, recordedAt?}`; room limits are checked at once |
+
+Room readings: until a sensor node has sent any readings, the room pages use the same simulated readings as the
+website, and every response says `simulated: true`. Once the ESP32 node sends its first reading, real readings are used.

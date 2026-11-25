@@ -13,7 +13,7 @@ export const PHONES = {
 };
 
 let server: Server | undefined;
-let base = '';
+let baseUrl = '';
 
 /** Wakes the database (Neon sleeps when idle) and starts the app. */
 export async function start() {
@@ -28,7 +28,7 @@ export async function start() {
   }
   server = createApp().listen(0);
   await new Promise((r) => server!.once('listening', r));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
 }
 
 export async function stop() {
@@ -37,7 +37,7 @@ export async function stop() {
 }
 
 export async function call(path: string, opts: { method?: string; body?: unknown; token?: string } = {}) {
-  const res = await fetch(base + path, {
+  const res = await fetch(baseUrl + path, {
     method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
     headers: { 'Content-Type': 'application/json', ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}) },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
@@ -55,5 +55,8 @@ export async function tokenFor(phone: string, password = '1234'): Promise<string
   tokens.set(phone, r.body.accessToken);
   return r.body.accessToken;
 }
+
+/** The API address of the running test server. */
+export const base = () => baseUrl;
 
 export const rand = () => Math.random().toString(36).slice(2, 7).toUpperCase();

@@ -8,6 +8,7 @@ import { auth } from './routes/auth.js';
 import { daily } from './routes/daily.js';
 import { health } from './routes/health.js';
 import { production } from './routes/production.js';
+import { results } from './routes/results.js';
 import { setup } from './routes/setup.js';
 import { users } from './routes/users.js';
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api/v1/users', users);
   app.use('/api/v1/setup', setup);
   app.use('/api/v1/daily', daily);
+  app.use('/api/v1', results);
   app.use('/api/v1', production);
 
   app.use(notFound);

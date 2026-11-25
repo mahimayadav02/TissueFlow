@@ -241,18 +241,24 @@ setup.put('/alert-rules/:id', manager, async (req, res) => {
 });
 
 // ---------- forecast settings ----------
-const share = z.number().min(0, 'Use a share between 0 and 1.').max(1, 'Use a share between 0 and 1.');
+const settingsOut = (s: { rootingSurvival: number; hardeningSurvival: number; lastMultiplicationStage: string; defaultRate: number | null }) => ({
+  rootingSurvival: s.rootingSurvival, hardeningSurvival: s.hardeningSurvival, lastMultiplicationStage: s.lastMultiplicationStage, defaultRate: s.defaultRate ?? undefined,
+});
 setup.get('/settings', async (_req, res) => {
-  const s = await prisma.settings.findUniqueOrThrow({ where: { settingsId: 1 } });
-  res.json({ rootingSurvival: s.rootingSurvival, hardeningSurvival: s.hardeningSurvival, lastMultiplicationStage: s.lastMultiplicationStage, defaultRate: s.defaultRate ?? undefined });
+  res.json(settingsOut(await prisma.settings.findUniqueOrThrow({ where: { settingsId: 1 } })));
 });
 setup.put('/settings', manager, async (req, res) => {
   const body = parseBody(
-    z.object({ rootingSurvival: share, hardeningSurvival: share, lastMultiplicationStage: z.string().trim().toUpperCase(), defaultRate: z.number().positive().nullable().optional() }),
+    z.object({ rootingSurvival: z.number(), hardeningSurvival: z.number(), lastMultiplicationStage: z.string().trim().toUpperCase(), defaultRate: z.number().nullable().optional() }),
     req.body,
   );
-  if (!(await prisma.stage.findUnique({ where: { code: body.lastMultiplicationStage } }))) throw new ApiError(400, `Stage ${body.lastMultiplicationStage} is not in the stage list.`);
+  // Same rules and messages as the website.
+  const ok = (x: number) => x > 0 && x <= 1;
+  if (!ok(body.rootingSurvival) || !ok(body.hardeningSurvival)) throw new ApiError(400, 'Survival must be between 1% and 100%.');
+  const st = await prisma.stage.findUnique({ where: { code: body.lastMultiplicationStage } });
+  if (!st || st.phase !== 'MULTIPLICATION') throw new ApiError(400, 'Choose a multiplication stage.');
+  if (body.defaultRate !== undefined && body.defaultRate !== null && !(body.defaultRate > 0)) throw new ApiError(400, 'Sale rate must be above 0.');
   const s = await prisma.settings.update({ where: { settingsId: 1 }, data: { ...body, defaultRate: body.defaultRate ?? null } });
-  await audit(req.user!.userId, 'Changed forecast assumptions', `rooting ${s.rootingSurvival}, hardening ${s.hardeningSurvival}`);
-  res.json({ rootingSurvival: s.rootingSurvival, hardeningSurvival: s.hardeningSurvival, lastMultiplicationStage: s.lastMultiplicationStage, defaultRate: s.defaultRate ?? undefined });
+  await audit(req.user!.userId, 'Changed forecast assumptions', `rooting ${s.rootingSurvival}, hardening ${s.hardeningSurvival}, last multiplication ${s.lastMultiplicationStage}`);
+  res.json(settingsOut(s));
 });

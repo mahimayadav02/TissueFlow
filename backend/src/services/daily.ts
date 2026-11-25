@@ -50,7 +50,7 @@ type Ent = {
 };
 type Tr = { trayId: number; qrCode: string; batchId: number; stageId: number; benchId: number; mediaLotId: number | null; bottleCount: number; startBottles: number | null; placedOn: string; status: string; version: number };
 type Mov = { movementId: number; batchId: number; trayId: number | null; newTrayIds: number[]; takenTrayIds: number[]; fromStageId: number; toStageId: number; fromBenchId: number | null; bottlesIn: number; bottlesOut: number; bottlesLost: number; movedAt: string; movedDate: string };
-type Lot = { mediaLotId: number; lotCode: string; recipeId: number; bottlesFilled: number; volumeLitre: number; expiresOn: string };
+type Lot = { mediaLotId: number; lotCode: string; recipeId: number; bottlesFilled: number; volumeLitre: number; expiresOn: string; preparedOn: string; preparedBy: number };
 
 export async function loadCtx(db: Db = prisma) {
   const [users, areas, benches, stages, batches, crops, recipes, rule, lots, asgs, ents, atts, trays, movs, conts] = await Promise.all([
@@ -68,13 +68,13 @@ export async function loadCtx(db: Db = prisma) {
     db.attendance.findMany(),
     db.tray.findMany(),
     db.trayMovement.findMany({ orderBy: { movementId: 'asc' } }),
-    db.contamination.findMany({ select: { contId: true, trayId: true, bottlesLost: true, foundOn: true } }),
+    db.contamination.findMany(),
   ]);
   return {
     users: users.map((u): U => ({ userId: u.userId, fullName: u.fullName, role: u.role, homeAreaId: u.homeAreaId, status: u.status, zoneIds: u.zones.map((z) => z.areaId) })),
     areas, benches, stages, crops, recipes, rule,
-    batches: batches.map((b) => ({ batchId: b.batchId, batchCode: b.batchCode, cropId: b.cropId, status: b.status })),
-    lots: lots.map((l): Lot => ({ mediaLotId: l.mediaLotId, lotCode: l.lotCode, recipeId: l.recipeId, bottlesFilled: l.bottlesFilled, volumeLitre: l.volumeLitre, expiresOn: isoDate(l.expiresOn) })),
+    batches: batches.map((b) => ({ batchId: b.batchId, batchCode: b.batchCode, cropId: b.cropId, status: b.status, parentBatchId: b.parentBatchId, startDate: isoDate(b.startDate) })),
+    lots: lots.map((l): Lot => ({ mediaLotId: l.mediaLotId, lotCode: l.lotCode, recipeId: l.recipeId, bottlesFilled: l.bottlesFilled, volumeLitre: l.volumeLitre, expiresOn: isoDate(l.expiresOn), preparedOn: isoDate(l.preparedOn), preparedBy: l.preparedBy })),
     asgs: asgs.map((a): Asg => ({ ...a, workDate: isoDate(a.workDate) })),
     ents: ents.map((e): Ent => ({
       ...e, taken: (e.taken as Taken[] | null) ?? null, workDate: isoDate(e.workDate), enteredAt: e.enteredAt.toISOString(), verifiedAt: e.verifiedAt?.toISOString() ?? null,
@@ -92,13 +92,16 @@ export const meOf = (req: Request): Me => {
   return { userId: u.userId, role: u.role, homeAreaId: u.homeAreaId, zoneIds: u.zoneIds };
 };
 
-/** Runs a change on its own: takes the daily-work lock, loads fresh tables and passes both on. */
-export function change<T>(fn: (tx: Db, c: Ctx) => Promise<T>): Promise<T> {
+/** Runs a change on its own: takes the lab's change lock, so changes that touch trays, stock or work run one at a time. */
+export function locked<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(4242)`;
-    return fn(tx, await loadCtx(tx));
+    return fn(tx);
   });
 }
+
+/** A daily-work change: takes the lock, loads fresh tables and passes both on. */
+export const change = <T>(fn: (tx: Db, c: Ctx) => Promise<T>): Promise<T> => locked(async (tx) => fn(tx, await loadCtx(tx)));
 
 // ---------- small lookups ----------
 const today = () => labToday();
@@ -784,7 +787,7 @@ export async function saveAssignment(tx: Db, c: Ctx, me: Me, input: AssignInput)
 /** Adds a batch the lab typed in that is not in the app yet. */
 async function addBatch(tx: Db, c: Ctx, code: string, cropId: number, date: string) {
   const b = await tx.batch.create({ data: { batchCode: code, cropId, startDate: dbDate(date) } });
-  c.batches.push({ batchId: b.batchId, batchCode: b.batchCode, cropId: b.cropId, status: b.status });
+  c.batches.push({ batchId: b.batchId, batchCode: b.batchCode, cropId: b.cropId, status: b.status, parentBatchId: b.parentBatchId, startDate: isoDate(b.startDate) });
   return b;
 }
 
@@ -1041,7 +1044,7 @@ async function subcultureByCount(tx: Db, c: Ctx, me: Me, input: CountSubculture,
       data: { trayId: first.trayId, bottlesLost: lost, cause: input.cause!, contType: input.contType!, foundOn: dbDate(date), reportedBy: me.userId, note: 'Found at sub-culture (typed in)' },
     });
     contId = cont.contId;
-    c.conts.push({ contId, trayId: first.trayId, bottlesLost: lost, foundOn: date });
+    c.conts.push({ ...cont, foundOn: date });
   }
   // Work for an earlier day is dated that day (17:00 lab time, i.e. 11:30 UTC in India), so day totals stay right.
   const movedAt = date === today() ? new Date() : new Date(`${date}T11:30:00Z`);
