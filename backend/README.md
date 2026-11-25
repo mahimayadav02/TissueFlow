@@ -165,3 +165,16 @@ website, and every response says `simulated: true`. Once the ESP32 node sends it
 The website then signs in, reads and saves through this server. Its calls go to `/api/v1/…` on the website's own
 address and Vite passes them on to `http://localhost:4000`, so the sign-in cookie works without extra settings.
 Without `.env.local` (and on Vercel until the server is online) the website keeps using its built-in sample data.
+
+## Hosting (Render)
+
+`render.yaml` at the top of the repository describes the hosted server: free plan, Ohio (next to the Neon
+database), build `npm ci --include=dev && npm run build`, start `npx prisma migrate deploy && node dist/server.js`,
+health check `/api/v1/health`. Create it on render.com with New → Blueprint → this repository, and type the two Neon
+connection strings when asked. Every push to `main` deploys again.
+
+The website on Vercel passes `/api/…` calls on to the Render server (`frontend/vercel.json`), so the website and the
+API share one address and the sign-in cookie stays first-party.
+
+On the free plan the server sleeps after 15 minutes without visits; the first visit after that takes up to about a
+minute while it wakes.

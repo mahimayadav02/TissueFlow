@@ -19,6 +19,8 @@ const schema = z.object({
   /** Optional: Resend API key for sending emails. Without it the reset link is printed in the server console. */
   RESEND_API_KEY: optional(z.string()),
   MAIL_FROM: z.string().default('TissueFlow <onboarding@resend.dev>'),
+  /** How many proxies sit in front of the server (Render: 1; Vercel passing calls on to Render: 2). Used to find the caller's IP. */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(1),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -15,8 +15,9 @@ import { users } from './routes/users.js';
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  // Render (and most hosts) sit behind one proxy: use its address header for the caller's IP.
-  app.set('trust proxy', 1);
+  // The server sits behind proxies (Render's, and Vercel's when the website passes calls on): use their
+  // address header to find the caller's IP, which the wrong-password limits count by.
+  app.set('trust proxy', env.TRUST_PROXY);
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
   app.use(express.json({ limit: '1mb' }));

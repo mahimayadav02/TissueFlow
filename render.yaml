@@ -1,0 +1,36 @@
+# Render blueprint for the TissueFlow API (backend/). Render reads this file when you create a "Blueprint"
+# from this repository. Secrets (the Neon connection strings) are typed into Render's dashboard, never stored here.
+services:
+  - type: web
+    name: tissueflow-api
+    runtime: node
+    plan: free
+    # Ohio is next to the Neon database (us-east-2), so each database call is quick.
+    region: ohio
+    rootDir: backend
+    buildCommand: npm ci --include=dev && npm run build
+    # Applies any new database migrations, then starts the server.
+    startCommand: npx prisma migrate deploy && node dist/server.js
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # The website's address: allowed to call the API, and used in password reset links.
+      - key: CORS_ORIGIN
+        value: https://frontend-orcin-two-94.vercel.app
+      - key: APP_URL
+        value: https://frontend-orcin-two-94.vercel.app
+      # Calls come through Vercel's proxy and then Render's.
+      - key: TRUST_PROXY
+        value: "2"
+      - key: LAB_TZ
+        value: Asia/Kolkata
