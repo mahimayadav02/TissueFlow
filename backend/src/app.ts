@@ -4,11 +4,15 @@ import express from 'express';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errors.js';
+import { auth } from './routes/auth.js';
 import { health } from './routes/health.js';
+import { users } from './routes/users.js';
 
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
+  // Render (and most hosts) sit behind one proxy: use its address header for the caller's IP.
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
@@ -17,6 +21,8 @@ export function createApp() {
     res.json({ name: 'TissueFlow API', version: 'v1', health: '/api/v1/health' });
   });
   app.use('/api/v1/health', health);
+  app.use('/api/v1/auth', auth);
+  app.use('/api/v1/users', users);
 
   app.use(notFound);
   app.use(errorHandler);
