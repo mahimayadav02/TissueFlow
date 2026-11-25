@@ -5,6 +5,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { DEMO_PASSWORD, SEED } from '../../frontend/src/lib/mockData';
+import { ID_TABLES, fixIdCounters } from './idCounters';
 
 const prisma = new PrismaClient();
 
@@ -15,13 +16,7 @@ const ts = (s: string) => new Date(s);
 const orNull = <T>(x: T | undefined | null) => (x === undefined ? null : x);
 
 /** Table name and its id column, in the order rows are inserted (parents before children). */
-const TABLES: [string, string][] = [
-  ['lab', 'labId'], ['area', 'areaId'], ['bench', 'benchId'], ['app_user', 'userId'], ['crop', 'cropId'], ['stage', 'stageId'],
-  ['media_recipe', 'recipeId'], ['alert_rule', 'ruleId'], ['batch', 'batchId'], ['sample', 'sampleId'], ['media_lot', 'mediaLotId'],
-  ['tray', 'trayId'], ['tray_movement', 'movementId'], ['contamination', 'contId'], ['attendance', 'attId'], ['work_assignment', 'assignId'],
-  ['production_entry', 'entryId'], ['item', 'itemId'], ['stock_txn', 'txnId'], ['cost_entry', 'costId'], ['sales_order', 'orderId'],
-  ['delivery', 'deliveryId'], ['sensor_device', 'deviceId'], ['alert', 'alertId'], ['audit_log', 'auditId'],
-];
+const TABLES = ID_TABLES;
 
 /** Inserts many rows in chunks (a single insert of thousands of rows is too big for one request). */
 async function insert<T>(name: string, rows: T[], create: (data: T[]) => Promise<unknown>) {
@@ -32,7 +27,7 @@ async function insert<T>(name: string, rows: T[], create: (data: T[]) => Promise
 async function main() {
   const S = SEED;
   console.log('Emptying tables …');
-  const all = [...TABLES.map(([t]) => t), 'user_zone', 'auth_session', 'password_reset', 'sensor_reading', 'settings'];
+  const all = [...new Set([...TABLES.map(([t]) => t), 'user_zone', 'auth_session', 'password_reset', 'sensor_reading', 'settings'])];
   await prisma.$executeRawUnsafe(`TRUNCATE ${all.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`);
 
   console.log('Adding sample data …');
@@ -98,11 +93,7 @@ async function main() {
   }));
 
   // Rows were added with their sample ids, so move each id counter past the highest id used.
-  for (const [table, id] of TABLES) {
-    await prisma.$executeRawUnsafe(
-      `SELECT setval(pg_get_serial_sequence('"${table}"', '"${id}"'), COALESCE((SELECT MAX("${id}") FROM "${table}"), 0) + 1, false)`,
-    );
-  }
+  await fixIdCounters(prisma);
   console.log(`Done. Every sample account uses the password ${DEMO_PASSWORD}.`);
 }
 
