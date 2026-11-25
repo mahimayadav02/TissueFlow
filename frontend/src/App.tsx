@@ -37,7 +37,6 @@ import Monitoring from './pages/results/Monitoring';
 import Report from './pages/results/Report';
 import Help from './pages/account/Help';
 import Profile from './pages/account/Profile';
-import About from './pages/public/About';
 import ForgotPassword from './pages/public/ForgotPassword';
 import ResetPassword from './pages/public/ResetPassword';
 
@@ -117,7 +116,6 @@ export default function App() {
       {/* Public pages: anyone can open these */}
       {/* The site opens straight on the sign-in page (signed-in people go on to their home page). */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />

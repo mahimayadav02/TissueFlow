@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { HelpCircle, Info, MapPin, Sprout } from 'lucide-react';
+import { HelpCircle, MapPin, Sprout } from 'lucide-react';
 import { NAV, type NavItem } from '../../config/nav';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -44,7 +44,6 @@ export function Sidebar({ role, onNavigate }: { role: Role; onNavigate?: () => v
       ))}
       <div className="mt-auto border-t border-white/10 pt-3">
         <Link to={`${role === 'MANAGER' ? '/m' : role === 'SUPERVISOR' ? '/s' : '/o'}/help`} onClick={onNavigate} className="focus-ring flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[#D3E3DB] hover:bg-white/5"><HelpCircle size={17} /> Help and guide</Link>
-        <Link to="/about" className="focus-ring flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[#D3E3DB] hover:bg-white/5"><Info size={17} /> About the project</Link>
       </div>
     </nav>
   );

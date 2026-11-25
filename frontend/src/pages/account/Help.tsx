@@ -104,7 +104,7 @@ export default function Help() {
           ))}
         </dl>
       </Card>
-      <p className="mt-5 text-sm text-ink-muted">Still stuck? {user.role === 'OPERATOR' ? 'Ask your supervisor.' : user.role === 'SUPERVISOR' ? 'Ask your manager.' : 'See the project page.'} <Link to={user.role === 'MANAGER' ? '/about' : `${base}`} className="font-semibold text-forest-700 underline">{user.role === 'MANAGER' ? 'About the project' : 'Back to your home page'}</Link></p>
+      <p className="mt-5 text-sm text-ink-muted">Still stuck? {user.role === 'OPERATOR' ? 'Ask your supervisor.' : user.role === 'SUPERVISOR' ? 'Ask your manager.' : 'Check the page help on each page.'} <Link to={base} className="font-semibold text-forest-700 underline">Back to your home page</Link></p>
     </>
   );
 }
