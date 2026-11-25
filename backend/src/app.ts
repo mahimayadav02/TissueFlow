@@ -20,6 +20,18 @@ export function createApp() {
   app.set('trust proxy', env.TRUST_PROXY);
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
+  // One line per request with how long it took (shown in Render's Logs). Health checks are left out.
+  if (env.NODE_ENV !== 'test') {
+    app.use((req, res, next) => {
+      if (req.path.endsWith('/health')) return next();
+      const start = process.hrtime.bigint();
+      res.on('finish', () => {
+        const ms = Number(process.hrtime.bigint() - start) / 1e6;
+        console.log(`${req.method} ${req.path} ${res.statusCode} ${ms.toFixed(0)}ms${ms > 2000 ? '  SLOW' : ''}`);
+      });
+      next();
+    });
+  }
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/', (_req, res) => {
