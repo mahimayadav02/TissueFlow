@@ -183,9 +183,10 @@ minute while it wakes.
 
 - **Checks** (`.github/workflows/ci.yml`) run on every push: backend type check, build and every API test on a
   fresh database made for the run (never the live one), website type check and build, and an `npm audit` report.
-- **Database backup** (`.github/workflows/backup.yml`) runs every night at 03:00 India time: it dumps the live Neon
-  database, restores the dump into an empty database to prove it works, encrypts it and keeps it for 30 days in the
-  run's files. Needs the repository secrets `BACKUP_DATABASE_URL` (Neon DIRECT_URL) and `BACKUP_PASSPHRASE`.
+- **Database backup** (`.github/workflows/backup.yml`) is ready but not switched on yet (future scope). When switched
+  on it dumps the live Neon database, restores the dump into an empty database to prove it works, encrypts it and
+  keeps it for 30 days in the run's files. Needs the repository secrets `BACKUP_DATABASE_URL` (Neon DIRECT_URL) and
+  `BACKUP_PASSPHRASE`, and the nightly schedule added back at the top of the file.
 - **Update packages** (`.github/workflows/packages.yml`) is started by hand to run an npm command on GitHub.
 
 ### Restoring a backup

@@ -1,4 +1,6 @@
-# Nightly backup of the live database (Neon), encrypted, kept for 30 days in this run's files.
+# Backup of the live database (Neon), encrypted, kept for 30 days in this run's files.
+# NOT SWITCHED ON YET (future scope): it runs only when started by hand. To run it every night, add the two
+# secrets below and put this back under "on:":   schedule: [{ cron: "30 21 * * *" }]   (03:00 in India)
 # The repository is public, so the backup is encrypted with BACKUP_PASSPHRASE before it is stored; without
 # that passphrase the file cannot be opened. Each run also restores its own backup into an empty database,
 # to prove the backup works.
@@ -9,8 +11,6 @@
 name: Database backup
 
 on:
-  schedule:
-    - cron: "30 21 * * *" # 03:00 in India
   workflow_dispatch:
 
 permissions:
