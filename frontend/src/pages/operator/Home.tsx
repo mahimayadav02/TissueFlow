@@ -7,20 +7,19 @@ import { api } from '../../lib/api';
 import { addDays, today } from '../../lib/apiUtil';
 import { useAuth } from '../../lib/auth';
 import { fmt } from '../../lib/paths';
-import { db } from '../../lib/store';
 import { workZones } from '../../lib/work';
 import { useLoad } from '../../lib/useLoad';
 import { AlertList } from '../shared/AlertList';
 
 /** Operator home (phone): today's work from the supervisor, progress, and anything sent back. */
 export default function OperatorHome() {
-  const { user } = useAuth();
+  const { user, areas } = useAuth();
   const { data } = useLoad(
     () => (user ? Promise.all([api.listAssignments(today(), user), api.todayAttendance(user), api.listEntries(user, { from: today() }), api.mySentBack(user)]) : Promise.reject(new Error('Not logged in'))),
     [user],
   );
   if (!user) return null;
-  const zones = workZones(user).map((id) => db.areas.find((a) => a.areaId === id)).filter((a) => !!a);
+  const zones = workZones(user).map((id) => areas.find((a) => a.areaId === id)).filter((a) => !!a);
   const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   const [lines, att, entries, sentBack] = data ?? [[], null, [], []];
   const live = entries.filter((e) => e.status !== 'REJECTED');

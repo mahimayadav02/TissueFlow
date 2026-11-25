@@ -155,3 +155,13 @@ Same rules as the website (`opsApi.ts`, `resultsApi.ts`, `forecast.ts`, `alertEn
 
 Room readings: until a sensor node has sent any readings, the room pages use the same simulated readings as the
 website, and every response says `simulated: true`. Once the ESP32 node sends its first reading, real readings are used.
+
+## Running the website with this server (on your computer)
+
+1. Start the server: `npm run dev` in `backend/`.
+2. In `frontend/`, make a file `.env.local` with one line: `VITE_USE_SERVER=1`
+3. Start the website: `npm run dev` in `frontend/`, and open http://localhost:5173.
+
+The website then signs in, reads and saves through this server. Its calls go to `/api/v1/…` on the website's own
+address and Vite passes them on to `http://localhost:4000`, so the sign-in cookie works without extra settings.
+Without `.env.local` (and on Vercel until the server is online) the website keeps using its built-in sample data.

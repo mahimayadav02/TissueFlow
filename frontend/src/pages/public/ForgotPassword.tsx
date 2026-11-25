@@ -2,17 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, MailCheck } from 'lucide-react';
 import { Button, Field, Input } from '../../components/ui';
+import { USE_SERVER, serverAuth } from '../../lib/server';
 import { PublicLayout } from './PublicLayout';
 
 /**
- * Forgot password. With the server (phase B2) this sends a one-time reset link by email.
- * Until then the form only explains that; the demo accounts all use the password 1234.
+ * Forgot password. With the server this sends a one-time reset link by email (valid 30 minutes).
+ * On sample data the form only explains that; the demo accounts all use the password 1234.
  */
 export default function ForgotPassword() {
   const [value, setValue] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
-  const submit = (e: FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const v = value.trim();
     if (!/^\d{10}$/.test(v) && !/^\S+@\S+\.\S+$/.test(v)) {
@@ -20,6 +22,17 @@ export default function ForgotPassword() {
       return;
     }
     setError('');
+    if (USE_SERVER) {
+      setBusy(true);
+      try {
+        await serverAuth.forgotPassword(v);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not send the link. Please try again.');
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
     setSent(true);
   };
   return (
@@ -34,7 +47,7 @@ export default function ForgotPassword() {
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">
                 If an account uses <span className="font-semibold text-ink">{value.trim()}</span>, a link to set a new password is on its way. The link works once and for 30 minutes.
               </p>
-              <p className="mt-4 rounded-lg bg-amberx-100 px-3 py-2 text-sm text-amberx-700">This demo runs on sample data and sends no email. Every demo account uses the password 1234.</p>
+              {!USE_SERVER && <p className="mt-4 rounded-lg bg-amberx-100 px-3 py-2 text-sm text-amberx-700">This demo runs on sample data and sends no email. Every demo account uses the password 1234.</p>}
             </div>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-4">
@@ -46,7 +59,7 @@ export default function ForgotPassword() {
                 <Input value={value} onChange={(e) => setValue(e.target.value)} autoComplete="username" autoFocus />
               </Field>
               {error && <p className="text-sm text-redx-700">{error}</p>}
-              <Button type="submit">Send reset link</Button>
+              <Button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send reset link'}</Button>
               <p className="text-xs text-ink-muted">No email on your account? Ask your manager to reset your password.</p>
             </form>
           )}

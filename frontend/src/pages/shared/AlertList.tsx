@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import { Badge, Card } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { db } from '../../lib/store';
 import type { Alert } from '../../lib/types';
 
 /** Small list of open alerts for the signed-in user (used on the home pages). */
 export function AlertList({ title = 'Open alerts' }: { title?: string }) {
-  const { user } = useAuth();
+  const { user, areas } = useAuth();
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
 
   useEffect(() => {
@@ -28,7 +27,7 @@ export function AlertList({ title = 'Open alerts' }: { title?: string }) {
               <div className="min-w-0 text-sm">
                 <div>{a.message}</div>
                 <div className="mt-0.5 text-xs text-ink-muted">
-                  {a.areaId ? db.areas.find((x) => x.areaId === a.areaId)?.name : 'Whole lab'} · {new Date(a.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {a.areaId ? areas.find((x) => x.areaId === a.areaId)?.name : 'Whole lab'} · {new Date(a.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                 </div>
               </div>
             </li>

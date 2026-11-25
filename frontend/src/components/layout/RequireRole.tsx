@@ -8,8 +8,10 @@ import type { Role } from '../../lib/types';
  * open this area → sent to their own home page.
  */
 export function RequireRole({ allow, children }: { allow: Role[]; children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const location = useLocation();
+  // Still checking with the server whether this browser is signed in.
+  if (!ready) return <div className="grid min-h-screen place-items-center text-sm text-ink-muted">Loading…</div>;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (!allow.includes(user.role)) return <Navigate to={HOME_OF[user.role]} replace />;
   return <>{children}</>;

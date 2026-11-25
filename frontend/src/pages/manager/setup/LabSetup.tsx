@@ -3,6 +3,8 @@ import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, ErrorText, Field, FormActions, IconButton, Input, Modal, PageHeader, Select, Table, cn } from '../../../components/ui';
 import { api, type New } from '../../../lib/api';
 import { resetDb } from '../../../lib/store';
+import { USE_SERVER } from '../../../lib/server';
+import { useAuth } from '../../../lib/auth';
 import { AREA_TYPE_LABEL, type Area, type AreaType, type Bench, type Lab } from '../../../lib/types';
 import { useLoad } from '../../../lib/useLoad';
 import { useSave } from '../../../lib/useSave';
@@ -10,7 +12,10 @@ import { HELP } from '../../../config/pageHelp';
 
 /** Lab details, zones (areas) and the benches in each zone. Manager only. */
 export default function LabSetup() {
-  const { data, error, reload } = useLoad(() => Promise.all([api.getLab(), api.listAreas(), api.listBenches(), api.listUsers()]));
+  const { data, error, reload: reloadPage } = useLoad(() => Promise.all([api.getLab(), api.listAreas(), api.listBenches(), api.listUsers()]));
+  const { reloadLabInfo } = useAuth();
+  // The lab name and zone names also show in the header and on other pages.
+  const reload = () => { reloadLabInfo(); return reloadPage(); };
   const [selected, setSelected] = useState<number | null>(null);
   const [editLab, setEditLab] = useState(false);
   const [editArea, setEditArea] = useState<New<Area, 'areaId'> | null>(null);
@@ -34,7 +39,7 @@ export default function LabSetup() {
       <PageHeader help={HELP.setup}
         title="Lab, zones and benches"
         subtitle="Set these up first. Every batch, tray and work entry is linked to a zone and a bench."
-        actions={<Button variant="ghost" onClick={() => window.confirm('Throw away all changes and go back to the sample data?') && resetDb()}><RotateCcw size={16} /> Reset sample data</Button>}
+        actions={!USE_SERVER && <Button variant="ghost" onClick={() => window.confirm('Throw away all changes and go back to the sample data?') && resetDb()}><RotateCcw size={16} /> Reset sample data</Button>}
       />
       <ErrorText>{actionError}</ErrorText>
 

@@ -39,6 +39,7 @@ import Help from './pages/account/Help';
 import Profile from './pages/account/Profile';
 import About from './pages/public/About';
 import ForgotPassword from './pages/public/ForgotPassword';
+import ResetPassword from './pages/public/ResetPassword';
 import Landing from './pages/public/Landing';
 
 /**
@@ -119,6 +120,7 @@ export default function App() {
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       {/* Printable label sheets open without the sidebar */}
       <Route path="/m/trays/labels" element={<RequireRole allow={['MANAGER']}><TrayLabels /></RequireRole>} />
       <Route path="/s/trays/labels" element={<RequireRole allow={['SUPERVISOR', 'MANAGER']}><TrayLabels /></RequireRole>} />

@@ -169,6 +169,13 @@ production.get('/trays/qr/:code', async (req, res) => {
   res.json(trayRow(t, lk));
 });
 
+/** Trays by id, for printing QR labels (?ids=1,2,3). Only trays the user may see. */
+production.get('/trays/by-ids', async (req, res) => {
+  const ids = String(req.query.ids ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 500);
+  const [scope, lk, trays] = await Promise.all([scopeOf(req), loadLookups(), prisma.tray.findMany({ where: { trayId: { in: ids } } })]);
+  res.json(trays.filter((t) => canSeeTray(scope, t, lk)).map((t) => trayRow(t, lk)));
+});
+
 /** Trays on each bench right now, to warn when a bench is full. */
 production.get('/trays/bench-load', async (_req, res) => {
   const rows = await prisma.tray.groupBy({ by: ['benchId'], where: { status: 'ACTIVE' }, _count: { _all: true } });
@@ -202,8 +209,8 @@ production.post('/trays/:id/subculture', async (req, res) => {
       bottlesOut: count('New bottles'),
       bottlesLost: count('Lost bottles'),
       mediaLotId: z.number().int().positive().nullable().optional(),
-      cause: causes.optional(),
-      contType: lossTypes.optional(),
+      cause: causes.nullish().transform((v) => v ?? undefined),
+      contType: lossTypes.nullish().transform((v) => v ?? undefined),
     }),
     req.body,
   );

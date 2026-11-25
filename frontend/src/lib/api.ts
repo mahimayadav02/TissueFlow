@@ -1,6 +1,5 @@
-// FAKE API. Every page gets and saves its data through these functions.
-// When the backend is ready, only this file changes: each function will call
-// fetch('/api/...') instead of the in-browser database. Pages do not change.
+// Every page gets and saves its data through `api`. Two versions with the same functions:
+// the sample data kept in the browser (below), and the real server (server.ts), chosen by VITE_USE_SERVER.
 import { db, nextId, save } from './store';
 import { ApiError, copy, need, same, wait, type New } from './apiUtil';
 import { evaluateAlerts } from './alertEngine';
@@ -10,6 +9,7 @@ import { zonesApi } from './zonesApi';
 import { opsApi } from './opsApi';
 import { productionApi } from './productionApi';
 import { workZones } from './work';
+import { USE_SERVER, serverApi } from './server';
 
 export { ApiError, type New };
 import type { Alert, AlertRule, Area, Bench, Crop, Lab, MediaRecipe, Session, Stage, User } from './types';
@@ -206,6 +206,8 @@ const coreApi = {
 };
 
 const rawApi = { ...coreApi, ...productionApi, ...dailyApi, ...opsApi, ...resultsApi, ...zonesApi };
+/** Every function the pages use. The server version (server.ts) has exactly these. */
+export type RawApi = typeof rawApi;
 
 // ---------- audit log ----------
 // Every function that changes data is wrapped: after it succeeds, one line goes into the audit log
@@ -268,4 +270,5 @@ function withAudit<T extends Record<string, unknown>>(raw: T): T {
   return out as T;
 }
 
-export const api = withAudit(rawApi);
+/** With VITE_USE_SERVER=1 the pages talk to the backend (which keeps its own audit log); otherwise to the sample data. */
+export const api: RawApi = USE_SERVER ? serverApi : withAudit(rawApi);

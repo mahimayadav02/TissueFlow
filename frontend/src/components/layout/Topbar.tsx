@@ -4,7 +4,6 @@ import { Bell, ChevronDown, HelpCircle, LogOut, Map, Menu, UserRound } from 'luc
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { basePath } from '../../lib/paths';
-import { db } from '../../lib/store';
 import { ROLE_LABEL } from '../../lib/types';
 import { Badge } from '../ui/Badge';
 import { startTour } from './Tour';
@@ -13,7 +12,7 @@ import { startTour } from './Tour';
 export const initials = (name: string) => name.split(/[\s.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
-  const { user, logout } = useAuth();
+  const { user, logout, lab, areas } = useAuth();
   const [openAlerts, setOpenAlerts] = useState(0);
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -36,7 +35,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
   if (!user) return null;
   const base = basePath(user);
-  const zoneNames = user.zoneIds.map((id) => db.areas.find((a) => a.areaId === id)?.name).filter(Boolean).join(', ');
+  const zoneNames = user.zoneIds.map((id) => areas.find((a) => a.areaId === id)?.name).filter(Boolean).join(', ');
   const item = 'focus-ring flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm hover:bg-forest-50';
 
   return (
@@ -45,8 +44,8 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <Menu size={20} />
       </button>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-ink">{db.lab.name}</div>
-        <div className="truncate text-xs text-ink-muted">{db.lab.address}</div>
+        <div className="truncate text-sm font-semibold text-ink">{lab?.name ?? ''}</div>
+        <div className="truncate text-xs text-ink-muted">{lab?.address ?? ''}</div>
       </div>
       <Badge tone="amber" className="hidden sm:inline-flex">Sample data</Badge>
       <Link to={`${base}/help`} className="focus-ring hidden rounded-lg p-2 text-ink-muted hover:bg-black/5 hover:text-ink sm:block" aria-label="Help">

@@ -19,6 +19,8 @@ const isoDay = z.string().refine(isIsoDate, 'Use a date like 2026-11-25.');
 const kinds = z.enum(['SUBCULTURE', 'WASH', 'MEDIA', 'QC_MEDIA', 'QC_CULTURE']);
 const whole = (label: string) => z.number({ invalid_type_error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(0, `${label} cannot be negative.`).max(1_000_000);
 const id = z.number().int().positive();
+/** Optional field: missing and null both mean "not given". */
+const opt = <T extends z.ZodTypeAny>(t: T) => t.nullish().transform((v) => (v ?? undefined) as z.infer<T> | undefined);
 
 /** ?date=YYYY-MM-DD, or today in the lab. */
 function dateQuery(req: Request, name = 'date'): string {
@@ -82,14 +84,14 @@ const assignBody = z.object({
   areaId: id.nullable().optional(),
   batchId: id.nullable().optional(),
   stageId: id.nullable().optional(),
-  batchCode: z.string().max(40).optional(),
-  stageCode: z.string().max(10).optional(),
+  batchCode: opt(z.string().max(40)),
+  stageCode: opt(z.string().max(10)),
   cropId: id.nullable().optional(),
   benchId: id.nullable().default(null),
   targetBottles: whole('Target'),
-  targetContaminated: whole('Contaminated target').optional(),
+  targetContaminated: opt(whole('Contaminated target')),
   recipeId: id.nullable().optional(),
-  mediaBatchCode: z.string().max(40).optional(),
+  mediaBatchCode: opt(z.string().max(40)),
 });
 
 daily.post('/assignments', staff, async (req, res) => {
@@ -157,21 +159,21 @@ daily.post('/entries', async (req, res) => {
       bottlesHandled: whole('Bottles'),
       batchId: id.nullable().optional(),
       stageId: id.nullable().optional(),
-      batchCode: z.string().max(40).optional(),
-      stageCode: z.string().max(10).optional(),
+      batchCode: opt(z.string().max(40)),
+      stageCode: opt(z.string().max(10)),
       cropId: id.nullable().optional(),
-      bottlesOut: whole('New bottles').optional(),
-      bottlesLost: whole('Lost bottles').optional(),
-      toStageId: id.optional(),
-      toBenchId: id.optional(),
+      bottlesOut: opt(whole('New bottles')),
+      bottlesLost: opt(whole('Lost bottles')),
+      toStageId: opt(id),
+      toBenchId: opt(id),
       mediaLotId: id.nullable().optional(),
-      cause: z.enum(['LAB', 'OPERATOR', 'SEASON', 'MEDIA']).optional(),
-      contType: z.enum(['FUNGAL', 'BACTERIAL', 'OTHER']).optional(),
-      contaminated: whole('Contaminated bottles').optional(),
+      cause: opt(z.enum(['LAB', 'OPERATOR', 'SEASON', 'MEDIA'])),
+      contType: opt(z.enum(['FUNGAL', 'BACTERIAL', 'OTHER'])),
+      contaminated: opt(whole('Contaminated bottles')),
       recipeId: id.nullable().optional(),
-      mediaBatchCode: z.string().max(40).optional(),
-      litres: z.number().min(0).max(10_000).optional(),
-      note: z.string().max(500).optional(),
+      mediaBatchCode: opt(z.string().max(40)),
+      litres: opt(z.number().min(0).max(10_000)),
+      note: opt(z.string().max(500)),
     }),
     req.body,
   );
