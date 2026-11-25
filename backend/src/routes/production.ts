@@ -23,7 +23,7 @@ const manager = requireRole('MANAGER');
 const isoDay = z.string().refine(isIsoDate, 'Use a date like 2026-11-25.');
 const causes = z.enum(['LAB', 'OPERATOR', 'SEASON', 'MEDIA']);
 const lossTypes = z.enum(['FUNGAL', 'BACTERIAL', 'OTHER']);
-const count = (label: string) => z.number({ invalid_type_error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(0, `${label} cannot be negative.`);
+const count = (label: string) => z.number({ error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(0, `${label} cannot be negative.`);
 
 // ---------- batches ----------
 production.get('/batches', async (req, res) => {

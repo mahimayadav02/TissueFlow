@@ -17,10 +17,10 @@ const operator = requireRole('OPERATOR');
 
 const isoDay = z.string().refine(isIsoDate, 'Use a date like 2026-11-25.');
 const kinds = z.enum(['SUBCULTURE', 'WASH', 'MEDIA', 'QC_MEDIA', 'QC_CULTURE']);
-const whole = (label: string) => z.number({ invalid_type_error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(0, `${label} cannot be negative.`).max(1_000_000);
+const whole = (label: string) => z.number({ error: `${label} must be a number.` }).int(`${label} must be a whole number.`).min(0, `${label} cannot be negative.`).max(1_000_000);
 const id = z.number().int().positive();
 /** Optional field: missing and null both mean "not given". */
-const opt = <T extends z.ZodTypeAny>(t: T) => t.nullish().transform((v) => (v ?? undefined) as z.infer<T> | undefined);
+const opt = <T extends z.ZodType>(t: T) => t.nullish().transform((v) => (v ?? undefined) as z.infer<T> | undefined);
 
 /** ?date=YYYY-MM-DD, or today in the lab. */
 function dateQuery(req: Request, name = 'date'): string {

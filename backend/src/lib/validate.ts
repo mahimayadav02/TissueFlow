@@ -2,7 +2,7 @@
 import type { z } from 'zod';
 import { ApiError } from '../middleware/errors.js';
 
-export function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+export function parseBody<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {
   const r = schema.safeParse(body ?? {});
   if (!r.success) {
     const i = r.error.issues[0];

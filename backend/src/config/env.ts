@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
 /** An empty value in .env (KEY="") counts as not set. */
-const optional = <T extends z.ZodTypeAny>(t: T) => z.preprocess((v) => (v === '' ? undefined : v), t.optional());
+const optional = <T extends z.ZodType>(t: T) => z.preprocess((v) => (v === '' ? undefined : v), t.optional());
 
 const schema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URL must be the Neon connection string (pooled)'),

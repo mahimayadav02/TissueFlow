@@ -28,7 +28,8 @@ const userBody = z.object({
   fullName: z.string().trim().min(1, 'Name is required.').max(100),
   role: z.enum(['MANAGER', 'SUPERVISOR', 'OPERATOR']),
   phone: z.string().trim().regex(/^\d{10}$/, 'Phone must be 10 digits.'),
-  email: z.string().trim().toLowerCase().email('Enter a valid email or leave it empty.').nullable().optional().or(z.literal('').transform(() => null)),
+  // An empty box means no email.
+  email: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? null : v), z.string().trim().toLowerCase().email('Enter a valid email or leave it empty.').nullable().optional()),
   homeAreaId: z.number().int().positive().nullable().default(null),
   zoneIds: z.array(z.number().int().positive()).max(20).default([]),
   status: z.enum(['ACTIVE', 'LEFT']).default('ACTIVE'),
