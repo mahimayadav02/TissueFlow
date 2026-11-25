@@ -38,6 +38,12 @@ jobs:
           bash -c "$CMD"
       - name: Security warnings after the change
         run: npm audit || true
+      - name: The changes (to copy into the repository)
+        run: |
+          echo "----- BEGIN PATCH -----"
+          git diff --no-color --full-index -- package.json package-lock.json | base64 -w 0
+          echo
+          echo "----- END PATCH -----"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.dir }}-packages
