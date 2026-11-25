@@ -1,0 +1,46 @@
+# Manual tool: run an npm command (for example "npm install zod@^4.6.7") in backend/ or frontend/ on GitHub,
+# then download the changed package.json and package-lock.json from the run's files.
+# Start it from the Actions tab → "Update packages" → Run workflow.
+name: Update packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      dir:
+        description: Folder
+        type: choice
+        options: [backend, frontend]
+      command:
+        description: npm command to run, e.g. npm install zod@^4.6.7
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.dir }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Run the command
+        env:
+          CMD: ${{ inputs.command }}
+        run: |
+          case "$CMD" in npm\ *) ;; *) echo "Only npm commands are allowed."; exit 1;; esac
+          bash -c "$CMD"
+      - name: Security warnings after the change
+        run: npm audit || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.dir }}-packages
+          path: |
+            ${{ inputs.dir }}/package.json
+            ${{ inputs.dir }}/package-lock.json
