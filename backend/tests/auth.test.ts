@@ -17,6 +17,16 @@ let base = '';
 let close: () => void;
 
 before(async () => {
+  // Neon puts a free database to sleep when idle; the first connection can take a few seconds to wake it.
+  for (let i = 0; ; i++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      break;
+    } catch (e) {
+      if (i >= 4) throw e;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
   const server = createApp().listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
