@@ -6,6 +6,8 @@ import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { auth } from './routes/auth.js';
 import { health } from './routes/health.js';
+import { production } from './routes/production.js';
+import { setup } from './routes/setup.js';
 import { users } from './routes/users.js';
 
 export function createApp() {
@@ -23,6 +25,8 @@ export function createApp() {
   app.use('/api/v1/health', health);
   app.use('/api/v1/auth', auth);
   app.use('/api/v1/users', users);
+  app.use('/api/v1/setup', setup);
+  app.use('/api/v1', production);
 
   app.use(notFound);
   app.use(errorHandler);

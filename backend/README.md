@@ -74,3 +74,33 @@ Rules:
 - If an old refresh token is used again, every device of that user is signed out (the token may have been copied).
 - Without `RESEND_API_KEY`, reset emails are not sent; the link is printed in the terminal running `npm run dev`.
   The sample accounts have no email: add one in `npm run db:studio` (table `app_user`) to try it.
+
+## Set-up and production
+
+Everyone signed in can read the set-up lists; only the manager can change them.
+
+| Endpoint | Who changes | What it is |
+| --- | --- | --- |
+| `GET/PUT /api/v1/setup/lab` | manager | Lab name, address, phone |
+| `/api/v1/setup/areas`, `/benches`, `/crops`, `/stages`, `/recipes` | manager | List (`GET`), add (`POST`), edit (`PUT /:id`), remove (`DELETE /:id`) |
+| `GET /api/v1/setup/alert-rules`, `PUT /alert-rules/:id` | manager | Warning and critical limits |
+| `GET/PUT /api/v1/setup/settings` | manager | Forecast assumptions |
+| `POST /api/v1/users`, `PUT /api/v1/users/:id` | manager | Add or edit a person (role, zones, left the lab, new password) |
+
+Production. Manager sees everything; a supervisor sees trays on benches in their zones; an operator sees trays
+in their own zones plus trays of batches they were given work on today.
+
+| Endpoint | Who | What it does |
+| --- | --- | --- |
+| `GET /api/v1/batches` (`?includeClosed=1`) | all | Batches with live bottles per stage |
+| `GET /api/v1/batches/:id` | all | Samples, trays, stage history, losses |
+| `POST /api/v1/batches` | manager | Start a batch: samples and first bottles (made into trays of up to 30) |
+| `POST /api/v1/batches/:id/split`, `/close` | manager | Move chosen trays into a new part; close a finished batch |
+| `GET /api/v1/trays`, `GET /trays/qr/:code` | all | Active trays; find a tray by its QR code |
+| `POST /api/v1/trays/:id/subculture` | all | New trays at the next stage, with any loss; an operator's sub-culture becomes a work entry |
+| `POST /api/v1/trays/move` | manager, supervisor | Move trays to another bench (own zones only) |
+| `GET/POST /api/v1/losses` | all | Losses (contamination) in your zones; record a loss |
+| `GET /api/v1/trays/bench-load`, `/trays/handled-by-stage` | all | Trays per bench; bottles handled per stage |
+
+If two people change the same tray at the same moment, the second one gets a message to open the tray again
+instead of silently overwriting the first change.
