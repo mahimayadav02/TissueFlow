@@ -7,6 +7,8 @@ build/
 .env
 .env.*
 !.env.example
+# The website's build setting (no secrets in it)
+!frontend/.env.production
 
 # System and editor files
 .DS_Store
