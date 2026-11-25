@@ -104,3 +104,28 @@ in their own zones plus trays of batches they were given work on today.
 
 If two people change the same tray at the same moment, the second one gets a message to open the tray again
 instead of silently overwriting the first change.
+
+## Daily work
+
+Same rules as the website (`frontend/src/lib/dailyApi.ts`). Changes run one at a time, so two supervisors giving out
+the same bottles at the same moment cannot both succeed.
+
+| Endpoint | Who | What it does |
+| --- | --- | --- |
+| `GET/POST /api/v1/daily/attendance` | manager, supervisor | Attendance sheet for a day; mark P / HD / A (today or up to 7 days back) |
+| `GET /api/v1/daily/my-attendance?month=`, `/today-attendance` | everyone | Own attendance |
+| `GET /api/v1/daily/assign-options?date=` | everyone | Operators, batches with free bottles, benches (who is at each hood), wash count, media |
+| `GET /api/v1/daily/assignments?date=` | everyone | Work given that day (operators: their own) |
+| `POST`, `PUT /:id`, `DELETE /:id` `/api/v1/daily/assignments` | manager, supervisor | Give, change or remove work (targets, hood limit of 2, typed batch and stage, new batch with crop) |
+| `POST /api/v1/daily/assignments/copy-previous` | manager, supervisor | Copy the last working day's work |
+| `GET /api/v1/daily/board?date=&areaId=` | manager, supervisor | Target against work done per operator |
+| `GET /api/v1/daily/entry-options?date=&operatorId=` | everyone | What the Record work form needs |
+| `POST /api/v1/daily/entries` | everyone | Record work by hand (operator: own, today; supervisor: for an operator, up to 7 days back, counts as checked) |
+| `GET /api/v1/daily/entries?status=&from=&to=` | everyone | Entries (operators: their own) |
+| `POST /api/v1/daily/entries/verify`, `/entries/:id/reject` | manager, supervisor | Accept entries, or send one back with a reason (undone if nothing has used it yet) |
+| `GET /api/v1/daily/output?from=&to=&operatorId=&areaId=&kind=&batchId=&stageId=` | everyone | Day totals and totals by operator, zone, work, batch and stage |
+| `GET /api/v1/daily/my-output?days=`, `/my-sent-back` | operator | Own day totals; entries sent back in the last 3 days |
+| `GET /api/v1/daily/wash` | everyone | Bottles waiting to be washed (plain and contaminated), and added today |
+
+For now each daily-work request reads the lab's working tables whole. That is quick at the size of one lab;
+when months of records have built up, the reads will be limited to the dates asked for (Phase 7).

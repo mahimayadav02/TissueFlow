@@ -6,7 +6,7 @@ import type { Prisma, TrayMovement } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { audit } from '../lib/audit.js';
-import { dbDate, isIsoDate, isoDate, labToday } from '../lib/dates.js';
+import { dbDate, isIsoDate, isoDate, labDate, labToday } from '../lib/dates.js';
 import { idParam } from '../lib/params.js';
 import { parseBody } from '../lib/validate.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -352,7 +352,7 @@ function groupMoves(moves: TrayMovement[]): TrayMovement[] {
   const groups = new Map<string, TrayMovement>();
   for (const m of moves) {
     if (m.fromBenchId === null || (m.fromStageId === m.toStageId && m.bottlesOut === m.bottlesIn)) continue;
-    const key = `${m.fromStageId}-${m.toStageId}-${isoDate(m.movedAt)}`;
+    const key = `${m.fromStageId}-${m.toStageId}-${labDate(m.movedAt)}`;
     const g = groups.get(key);
     if (g) {
       g.bottlesIn += m.bottlesIn;

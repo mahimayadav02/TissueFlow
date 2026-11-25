@@ -127,7 +127,7 @@ export async function lostByBatch(db: Db = prisma): Promise<Map<number, number>>
 }
 
 /** Splits bottles into new trays of up to 30, with QR codes that continue the batch's numbering. */
-export async function makeTrays(db: Db, batch: Batch, stageId: number, benchId: number, bottles: number, mediaLotId: number | null): Promise<Tray[]> {
+export async function makeTrays(db: Db, batch: Pick<Batch, 'batchId' | 'batchCode'>, stageId: number, benchId: number, bottles: number, mediaLotId: number | null): Promise<Tray[]> {
   if (bottles <= 0) return [];
   // Highest number already used with this batch code (a split batch's trays keep their old codes).
   const prefix = `${batch.batchCode}-`;
@@ -147,7 +147,7 @@ export async function makeTrays(db: Db, batch: Batch, stageId: number, benchId: 
 }
 
 /** A media lot can fill this many new bottles for the stage they go to. */
-export async function checkLot(db: Db, mediaLotId: number | null | undefined, to: Stage, bottlesOut: number) {
+export async function checkLot(db: Db, mediaLotId: number | null | undefined, to: Pick<Stage, 'phase' | 'code'>, bottlesOut: number) {
   if (!mediaLotId) return;
   const lot = await db.mediaLot.findUnique({ where: { mediaLotId }, include: { recipe: true } });
   if (!lot) throw new ApiError(400, 'Media lot not found.');
@@ -159,7 +159,7 @@ export async function checkLot(db: Db, mediaLotId: number | null | undefined, to
 }
 
 /** Changes a tray only if nobody else changed it since it was read. */
-export async function updateTray(db: Db, t: Tray, data: Prisma.TrayUncheckedUpdateManyInput) {
+export async function updateTray(db: Db, t: Pick<Tray, 'trayId' | 'version' | 'qrCode'>, data: Prisma.TrayUncheckedUpdateManyInput) {
   const r = await db.tray.updateMany({ where: { trayId: t.trayId, version: t.version, status: 'ACTIVE' }, data: { ...data, version: { increment: 1 } } });
   if (r.count !== 1) throw new ApiError(409, `Tray ${t.qrCode} was just changed by someone else. Open it again and check.`);
 }

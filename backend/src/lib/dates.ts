@@ -5,6 +5,8 @@ const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', mo
 
 /** Today in the lab, as YYYY-MM-DD. */
 export const labToday = (now = new Date()) => fmt.format(now);
+/** The lab's calendar date of a moment in time, as YYYY-MM-DD. */
+export const labDate = (d: Date) => fmt.format(d);
 /** A YYYY-MM-DD string as the value stored in a date column. */
 export const dbDate = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
 /** A date column's value as YYYY-MM-DD. */
